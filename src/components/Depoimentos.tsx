@@ -1,25 +1,25 @@
-export default function Testimonials() {
+export default function Depoimentos() {
     const testimonials = [
         {
-            name: 'Sarah Johnson',
-            role: 'AI Developer',
-            company: 'TechCorp',
-            content: 'This platform has revolutionized how we build AI applications. The tools are intuitive and powerful.',
-            avatar: 'SJ'
+            name: 'Luis Felipe Guedes',
+            role: 'Tecnico em Informática to internt',
+            company: 'Etec',
+            content: 'Esta plataforma transforma o aprendizado de Front-End em uma experiência visual e prática. As ferramentas facilitam a compreensão do código na prática.',
+            avatar: 'LF'
         },
         {
-            name: 'Michael Chen',
-            role: 'CTO',
-            company: 'InnovateAI',
-            content: 'The API integration is seamless, and the support team is incredibly helpful. Highly recommended!',
-            avatar: 'MC'
+            name: 'Júlia Linda Rufato',
+            role: 'Tecnico em Informática to internt',
+            company: 'ETEC',
+            content: 'Esta plataforma transforma o aprendizado de Front-End em uma experiência visual e prática. As ferramentas facilitam a compreensão do código na prática.',
+            avatar: 'JU'
         },
         {
-            name: 'Emily Davis',
-            role: 'Product Manager',
-            company: 'DataFlow',
-            content: 'From prototype to production, this toolkit has everything we need. Game-changing for our workflow.',
-            avatar: 'ED'
+            name: 'Emanuel da Matad Brandrão',
+            role: 'Desocupado',
+            company: 'ETEC',
+            content: 'Esta plataforma transforma o aprendizado de Front-End em uma experiência visual e prática.',
+            avatar: 'EM'
         }
     ];
 
@@ -28,10 +28,10 @@ export default function Testimonials() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-16">
                     <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-                        What Our Users Say
+                        O que nossos usuários dizem
                     </h2>
                     <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-                        Join thousands of developers building the future with our AI tools
+                        Junte-se a quem está transformando layouts em código real com o DRAW CODE.
                     </p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

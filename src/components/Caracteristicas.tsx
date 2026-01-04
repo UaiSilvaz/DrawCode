@@ -1,46 +1,47 @@
-export default function Features() {
+export default function Caracteristicas() {
     const features = [
         {
-            icon: '🤖',
-            title: 'AI Chatbots',
-            description: 'Create intelligent chatbots that understand context and provide human-like responses.'
-        },
-        {
             icon: '🎨',
-            title: 'Image Generation',
-            description: 'Generate stunning images from text descriptions using advanced AI models.'
+            title: 'Editor Visual de Layouts',
+            description: 'Crie interfaces de forma visual, arrastando elementos e montando layouts sem escrever código.'
         },
         {
-            icon: '📝',
-            title: 'Content Creation',
-            description: 'Automate content creation with AI-powered writing assistants and editors.'
+            icon: '💻',
+            title: 'Geração Automática de Código',
+            description: 'Transforme seus layouts em código HTML, CSS e JavaScript em tempo real.'
         },
         {
-            icon: '🔍',
-            title: 'Data Analysis',
-            description: 'Extract insights from your data with powerful AI analytics tools.'
+            icon: '🤖',
+            title: 'Assistente com IA',
+            description: 'Receba sugestões inteligentes para melhorar seu código e aprender boas práticas de Front-End.'
         },
         {
-            icon: '🎵',
-            title: 'Audio Processing',
-            description: 'Convert text to speech and analyze audio with cutting-edge AI technology.'
+            icon: '📚',
+            title: 'Aprendizado Prático',
+            description: 'Aprenda Front-End na prática, vendo o código nascer conforme você constrói o layout.'
+        },
+        {
+            icon: '🔄',
+            title: 'Edição e Visualização em Tempo Real',
+            description: 'Edite, teste e visualize suas alterações instantaneamente, sem recarregar a página.'
         },
         {
             icon: '🌐',
-            title: 'API Integration',
-            description: 'Seamlessly integrate AI capabilities into your existing applications.'
+            title: 'Exportação e Compartilhamento',
+            description: 'Exporte seus projetos ou compartilhe com outros usuários para estudar e evoluir.'
         }
     ];
+
 
     return (
         <section id="features" className="py-20 bg-white dark:bg-dark">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-16">
                     <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-                        Powerful Features
+                        Ferramentas que impulsionam seu aprendizado
                     </h2>
                     <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-                        Everything you need to build next-generation AI applications
+                        Tudo o que você precisa para aprender Front-End de forma prática e visual
                     </p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

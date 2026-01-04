@@ -1,4 +1,4 @@
-export default function Footer() {
+export default function Rodape() {
     return (
         <footer className="bg-gray-900 text-white py-12">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -6,12 +6,12 @@ export default function Footer() {
                     <div className="col-span-1 md:col-span-2">
                         <div className="flex items-center space-x-2 mb-4">
                             <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                                <span className="text-white font-bold text-sm"><img src="favicon.ico" alt="" /></span>
+                                <span className="text-white font-bold text-sm"><img src="/IconD.png" alt="Icon" className="w-full h-full object-cover scale-150" /></span>
                             </div>
                             <span className="text-xl font-bold">Draw Code</span>
                         </div>
                         <p className="text-gray-400 mb-4">
-                            Empowering developers to build the next generation of AI applications with cutting-edge tools and technologies.
+                            Tornar o aprendizado de Front-End simples, visual e acessível, ajudando iniciantes a criar HTML, CSS e JavaScript sem complicação.
                         </p>
                         <div className="flex space-x-4">
                             <a href="#" className="text-gray-400 hover:text-white transition-colors">

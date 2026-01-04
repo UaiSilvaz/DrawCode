@@ -1,40 +1,40 @@
-export default function Pricing() {
+export default function Precos() {
     const plans = [
         {
-            name: 'Starter',
-            price: '$9',
-            period: '/month',
+            name: 'Inicial',
+            price: 'R$0',
+            period: '/mês',
             features: [
-                '1 AI Model',
-                '100 API Calls',
-                'Basic Support',
+                'IA Scanner Ilimitado',
+                '100 Projetos Inicias',
+                'Suporte Basico',
                 'Community Access'
             ],
             popular: false
         },
         {
             name: 'Pro',
-            price: '$29',
-            period: '/month',
+            price: 'R$9',
+            period: '/mês',
             features: [
-                '5 AI Models',
-                '1000 API Calls',
-                'Priority Support',
-                'Advanced Analytics',
-                'Custom Integrations'
+                'IA Scanner Ilimitado',
+                '10000 Projetos',
+                'Suporte 24hrs',
+                'Elementos Premiuns',
+                'Customizações Avançadas'
             ],
             popular: true
         },
         {
-            name: 'Enterprise',
-            price: '$99',
-            period: '/month',
+            name: 'Mestre',
+            price: 'R$99',
+            period: '/ano',
             features: [
-                'Unlimited AI Models',
-                'Unlimited API Calls',
-                '24/7 Support',
-                'Custom Solutions',
-                'Dedicated Account Manager'
+                'IA Scanner Ilimitado',
+                'Projetos Ilimitados',
+                'Suporte 24hrs',
+                'Elementos Premiuns',
+                'Customizações Avançadas'
             ],
             popular: false
         }
@@ -45,10 +45,11 @@ export default function Pricing() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-16">
                     <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-                        Choose Your Plan
+                        Escolha o seu plano
+
                     </h2>
                     <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-                        Select the perfect plan for your AI development needs
+                        Selecione o plano perfeito para as seu aprendizado
                     </p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -56,7 +57,7 @@ export default function Pricing() {
                         <div key={index} className={`bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg ${plan.popular ? 'ring-2 ring-blue-500 scale-105' : ''}`}>
                             {plan.popular && (
                                 <div className="bg-blue-500 text-white text-sm font-semibold px-3 py-1 rounded-full inline-block mb-4">
-                                    Most Popular
+                                    Mais Popular
                                 </div>
                             )}
                             <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
@@ -77,7 +78,7 @@ export default function Pricing() {
                                 ))}
                             </ul>
                             <button className={`w-full py-3 px-6 rounded-lg font-semibold transition-colors ${plan.popular ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white'}`}>
-                                Get Started
+                                Começar
                             </button>
                         </div>
                     ))}

@@ -1,13 +1,14 @@
-export default function Contact() {
+export default function Contato() {
     return (
         <section id="contact" className="py-20 bg-gray-50 dark:bg-dark">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-16">
                     <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-                        Get In Touch
+                        Entre em contato
+
                     </h2>
                     <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-                        Ready to start building? Contact our team for support and guidance.
+                        Pronto para começar a criar? Entre em contato com nossa equipe para suporte e orientação.
                     </p>
                 </div>
                 <div className="max-w-2xl mx-auto">
@@ -15,7 +16,7 @@ export default function Contact() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    First Name
+                                    Primeiro Nome
                                 </label>
                                 <input
                                     type="text"
@@ -25,7 +26,7 @@ export default function Contact() {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    Last Name
+                                    Ultimo Nome
                                 </label>
                                 <input
                                     type="text"
@@ -46,7 +47,7 @@ export default function Contact() {
                         </div>
                         <div className="mb-6">
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Message
+                                Mensagem
                             </label>
                             <textarea
                                 rows={4}
@@ -58,7 +59,7 @@ export default function Contact() {
                             type="submit"
                             className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-semibold transition-colors"
                         >
-                            Send Message
+                            Enviar Mensagem
                         </button>
                     </form>
                 </div>
