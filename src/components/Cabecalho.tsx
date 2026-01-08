@@ -1,33 +1,145 @@
+'use client';
+
 import Link from 'next/link';
+import { useEffect, useRef } from 'react';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+gsap.registerPlugin(ScrollTrigger);
 
 export default function Cabecalho() {
+    const navRef = useRef<HTMLElement>(null);
+    const logoRef = useRef<HTMLDivElement>(null);
+    const linksRef = useRef<HTMLDivElement>(null);
+    const actionsRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const ctx = gsap.context(() => {
+
+            // Navbar entrance
+            gsap.fromTo(
+                navRef.current,
+                { y: -80, opacity: 0 },
+                { y: 0, opacity: 1, duration: 1, ease: 'power3.out' }
+            );
+
+            // Logo animation
+            gsap.fromTo(
+                logoRef.current,
+                { scale: 0.8, opacity: 0 },
+                { scale: 1, opacity: 1, duration: 0.8, delay: 0.2, ease: 'back.out(1.7)' }
+            );
+
+            // Links stagger
+            gsap.fromTo(
+                linksRef.current?.children || [],
+                { y: -20, opacity: 0 },
+                {
+                    y: 0,
+                    opacity: 1,
+                    duration: 0.6,
+                    stagger: 0.1,
+                    delay: 0.4,
+                    ease: 'power2.out'
+                }
+            );
+
+            // Actions buttons
+            gsap.fromTo(
+                actionsRef.current?.children || [],
+                { y: -20, opacity: 0 },
+                {
+                    y: 0,
+                    opacity: 1,
+                    duration: 0.6,
+                    stagger: 0.15,
+                    delay: 0.6,
+                    ease: 'power2.out'
+                }
+            );
+
+            // Navbar scroll effect
+            ScrollTrigger.create({
+                start: 0,
+                onUpdate: (self) => {
+                    gsap.to(navRef.current, {
+                        backgroundColor: self.scroll() > 10 ? 'rgba(0, 0, 0, 0)' : 'rgba(0, 0, 0, 0.33)',
+                        backdropFilter: 'blur(12px)',
+                        duration: 0.3,
+                        ease: 'power2.out'
+                    });
+                }
+            });
+
+            // Hover animations (links & buttons)
+            const hoverItems = document.querySelectorAll('.nav-hover');
+            hoverItems.forEach((item) => {
+                item.addEventListener('mouseenter', () => {
+                    gsap.to(item, { y: -2, duration: 0.3, ease: 'power2.out' });
+                });
+                item.addEventListener('mouseleave', () => {
+                    gsap.to(item, { y: 0, duration: 0.3, ease: 'power2.out' });
+                });
+            });
+
+        }, navRef);
+
+        return () => ctx.revert();
+    }, []);
+
     return (
-        <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-gray-200 dark:bg-dark/80 dark:border-gray-800">
+        <nav
+            ref={navRef}
+            className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-gray-200 dark:bg-dark/80 dark:border-gray-800"
+        >
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center h-16">
-                    <div className="flex items-center">
+
+                    {/* Logo */}
+                    <div ref={logoRef}>
                         <Link href="/" className="flex items-center space-x-2">
                             <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                                <span className="text-white font-bold text-sm"><img src="/IconD.png" alt="Icon" className="w-full h-full object-cover scale-150" /></span>
+                                <img
+                                    src="/IconD.png"
+                                    alt="Icon"
+                                    className="w-full h-full object-cover scale-150"
+                                />
                             </div>
-                            <span className="text-xl font-bold text-gray-900 dark:text-white">Draw Code</span>
+                            <span className="text-xl font-bold text-gray-900 dark:text-white">
+                                Draw Code
+                            </span>
                         </Link>
                     </div>
-                    <div className="hidden md:flex items-center space-x-8">
-                        <Link href="#home" className="text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400 transition-colors">Inicio</Link>
-                        <Link href="#features" className="text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400 transition-colors">Funções</Link>
-                        <Link href="#pricing" className="text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400 transition-colors">Preços</Link>
-                        <Link href="#testimonials" className="text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400 transition-colors">Depoimentos</Link>
-                        <Link href="#contact" className="text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400 transition-colors">Contato</Link>
+
+                    {/* Links */}
+                    <div
+                        ref={linksRef}
+                        className="hidden md:flex items-center space-x-8"
+                    >
+                        {['Inicio', 'Funções', 'Preços', 'Depoimentos', 'Contato'].map((item, index) => (
+                            <Link
+                                key={index}
+                                href={`#${item.toLowerCase()}`}
+                                className="nav-hover text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                            >
+                                {item}
+                            </Link>
+                        ))}
                     </div>
-                    <div className="flex items-center space-x-4">
-                        <button className="text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400 transition-colors">
+
+                    {/* Actions */}
+                    <div
+                        ref={actionsRef}
+                        className="flex items-center space-x-4"
+                    >
+                        <button className="nav-hover text-gray-700 dark:text-gray-300 hover:text-blue-600 transition-colors">
                             Login
                         </button>
-                        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
+                        <button className="nav-hover bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
                             Cadastrar
                         </button>
                     </div>
+
                 </div>
             </div>
         </nav>

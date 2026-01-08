@@ -1,3 +1,11 @@
+'use client';
+
+import { useEffect, useRef } from 'react';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+gsap.registerPlugin(ScrollTrigger);
+
 export default function Caracteristicas() {
     const features = [
         {
@@ -33,21 +41,88 @@ export default function Caracteristicas() {
     ];
 
 
+    const sectionRef = useRef<HTMLElement>(null);
+    const titleRef = useRef<HTMLHeadingElement>(null);
+    const subtitleRef = useRef<HTMLParagraphElement>(null);
+    const cardsRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const ctx = gsap.context(() => {
+            // Title animation
+            gsap.fromTo(titleRef.current,
+                { y: 50, opacity: 0 },
+                { y: 0, opacity: 1, duration: 1, ease: "power3.out" }
+            );
+
+            // Subtitle animation
+            gsap.fromTo(subtitleRef.current,
+                { y: 30, opacity: 0 },
+                { y: 0, opacity: 1, duration: 1, delay: 0.2, ease: "power3.out" }
+            );
+
+            // Cards staggered animation
+            gsap.fromTo(cardsRef.current?.children || [],
+                { y: 60, opacity: 0, scale: 0.9 },
+                {
+                    y: 0,
+                    opacity: 1,
+                    scale: 1,
+                    duration: 0.8,
+                    stagger: 0.2,
+                    ease: "back.out(1.7)",
+                    scrollTrigger: {
+                        trigger: sectionRef.current,
+                        start: "top 80%",
+                        toggleActions: "play none none reverse"
+                    }
+                }
+            );
+
+            // Icon bounce animation on hover
+            const cards = cardsRef.current?.children;
+            if (cards) {
+                Array.from(cards).forEach((card, index) => {
+                    const icon = card.querySelector('.feature-icon');
+                    if (icon) {
+                        card.addEventListener('mouseenter', () => {
+                            gsap.to(icon, {
+                                scale: 1.2,
+                                rotation: 10,
+                                duration: 0.3,
+                                ease: "power2.out"
+                            });
+                        });
+                        card.addEventListener('mouseleave', () => {
+                            gsap.to(icon, {
+                                scale: 1,
+                                rotation: 0,
+                                duration: 0.3,
+                                ease: "power2.out"
+                            });
+                        });
+                    }
+                });
+            }
+        }, sectionRef);
+
+        return () => ctx.revert();
+    }, []);
+
     return (
-        <section id="features" className="py-20 bg-white dark:bg-dark">
+        <section ref={sectionRef} id="features" className="py-20 bg-white dark:bg-dark">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-16">
-                    <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+                    <h2 ref={titleRef} className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
                         Ferramentas que impulsionam seu aprendizado
                     </h2>
-                    <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+                    <p ref={subtitleRef} className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
                         Tudo o que você precisa para aprender Front-End de forma prática e visual
                     </p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div ref={cardsRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {features.map((feature, index) => (
-                        <div key={index} className="bg-gray-50 dark:bg-gray-800 p-8 rounded-xl hover:shadow-lg transition-shadow">
-                            <div className="text-4xl mb-4">{feature.icon}</div>
+                        <div key={index} className="bg-gray-50 dark:bg-gray-800 p-8 rounded-xl hover:shadow-lg transition-all duration-300 hover:scale-105">
+                            <div className="feature-icon text-4xl mb-4">{feature.icon}</div>
                             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
                                 {feature.title}
                             </h3>
