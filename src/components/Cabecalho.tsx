@@ -135,9 +135,12 @@ export default function Cabecalho() {
                                     className="w-full h-full object-cover scale-150"
                                 />
                             </div>
-                            <span className="text-xl font-bold text-gray-900 dark:text-white">
-                                Draw Code
-                            </span>
+                            <div>
+                                <span className="text-xl font-bold text-gray-900 dark:text-white">
+                                    Draw Code
+                                </span>
+
+                            </div>
                         </Link>
                     </div>
 
@@ -150,7 +153,7 @@ export default function Cabecalho() {
                             <Link
                                 key={index}
                                 href={`#${item.toLowerCase()}`}
-                                className="nav-hover text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                className="nav-hover cursor-target text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                             >
                                 {item}
                             </Link>
@@ -162,11 +165,12 @@ export default function Cabecalho() {
                         ref={actionsRef}
                         className="flex items-center space-x-4"
                     >
-                        <button className="nav-hover text-gray-700 dark:text-gray-300 hover:text-blue-600 transition-colors">
+                        <button className="nav-hover cursor-target text-gray-700 dark:text-gray-300 hover:text-blue-600 transition-colors">
                             Cadastrar
                         </button>
-                        <button className="
+                        <Link href="/login" className="
   login-button
+  cursor-target
   relative
   px-10 py-2
   rounded-2xl
@@ -179,7 +183,7 @@ export default function Cabecalho() {
   hover:brightness-110
   active:scale-95
 ">
-                            Login                        </button>
+                            Login                        </Link>
                     </div>
 
                 </div>

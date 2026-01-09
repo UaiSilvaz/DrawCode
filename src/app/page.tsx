@@ -1,4 +1,3 @@
-
 import Contato from '@/components/Contato';
 import Caracteristicas from '@/components/Caracteristicas';
 import Clientes from '@/components/Clientes';

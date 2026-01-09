@@ -14,10 +14,10 @@ export default function Clientes() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-16">
                     <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-                        Linguagens Utilizadas
+                        Tecnologias Utilizadas
                     </h2>
                     <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-                        Linguagens que possibilitaram o desenvolvimento do Draw Code
+                        Tecnologias que possibilitaram o desenvolvimento do Draw Code
                     </p>
                 </div>
                 <div className="relative w-full">
