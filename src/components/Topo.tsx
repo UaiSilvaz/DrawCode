@@ -1,9 +1,16 @@
 
 
+import dynamic from 'next/dynamic';
+
+const Silk = dynamic(() => import('./Silk'), { ssr: true });
+
 export default function Topo() {
     return (
-        <section id="home" className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-dark dark:to-dark">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden">
+            <div className="absolute inset-0 z-0">
+                <Silk />
+            </div>
+            <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                 <div className="max-w-4xl mx-auto">
                     <h1 className="text-5xl md:text-7xl font-bold text-gray-900 dark:text-white mb-6">
                         Bem Vindo ao
@@ -15,16 +22,37 @@ export default function Topo() {
                         Tornar o aprendizado de Front-End simples, visual e acessível, ajudando iniciantes a criar HTML, CSS e JavaScript sem complicação.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                        <button className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg text-lg font-semibold transition-colors">
+                        <button className="
+  relative
+  px-10 py-4
+  rounded-2xl
+  text-lg font-semibold text-white
+  bg-gradient-to-r from-fuchsia-500 via-purple-600 to-indigo-600
+  shadow-[0_12px_30px_rgba(128,0,255,0.6)]
+  transition-all duration-300 ease-out
+  hover:scale-105
+  hover:shadow-[0_12px_30px_rgba(128,0,255,0.6)]
+  hover:brightness-110
+  active:scale-95
+">
                             Comece a criar
                         </button>
-                        <button className="border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-blue-600 hover:text-blue-600 px-8 py-4 rounded-lg text-lg font-semibold transition-colors">
+
+                        <button className="
+  border-2 border-gray-300 dark:border-gray-600
+  text-gray-700 dark:text-gray-300
+  hover:border-blue-600 hover:text-blue-600
+  px-8 py-4 rounded-lg text-lg font-semibold
+  transition-all duration-300 ease-out
+  hover:shadow-[0_12px_30px_rgba(128,0,255,0.6)]
+">
                             Criar conta
                         </button>
+
                     </div>
                 </div>
             </div>
-            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce z-10">
                 <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                 </svg>
