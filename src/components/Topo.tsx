@@ -10,6 +10,7 @@ export default function Topo() {
             <div className="absolute inset-0 z-0">
                 <Silk />
             </div>
+
             <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                 <div className="max-w-4xl mx-auto">
                     <h1 className="text-5xl md:text-7xl font-bold text-gray-900 dark:text-white mb-6">

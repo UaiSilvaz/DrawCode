@@ -82,6 +82,36 @@ export default function Cabecalho() {
                 });
             });
 
+            // Light animation for login button
+            const loginButton = document.querySelector('.login-button');
+            if (loginButton) {
+                loginButton.addEventListener('mouseenter', () => {
+                    gsap.to(loginButton, {
+                        boxShadow: '0 12px 30px rgba(128, 0, 255, 0.8), 0 0 20px rgba(255, 255, 255, 0.3)',
+                        duration: 0.3,
+                        ease: 'power2.out'
+                    });
+                    // Add subtle pulsing light effect
+                    gsap.to(loginButton, {
+                        filter: 'brightness(1.2) saturate(1.1)',
+                        duration: 0.3,
+                        ease: 'power2.out',
+                        yoyo: true,
+                        repeat: -1,
+                        repeatDelay: 0.5
+                    });
+                });
+                loginButton.addEventListener('mouseleave', () => {
+                    gsap.to(loginButton, {
+                        boxShadow: '0 12px 30px rgba(128, 0, 255, 0.6)',
+                        filter: 'brightness(1)',
+                        duration: 0.3,
+                        ease: 'power2.out'
+                    });
+                    gsap.killTweensOf(loginButton, { filter: true });
+                });
+            }
+
         }, navRef);
 
         return () => ctx.revert();
@@ -133,11 +163,23 @@ export default function Cabecalho() {
                         className="flex items-center space-x-4"
                     >
                         <button className="nav-hover text-gray-700 dark:text-gray-300 hover:text-blue-600 transition-colors">
-                            Login
-                        </button>
-                        <button className="nav-hover bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
                             Cadastrar
                         </button>
+                        <button className="
+  login-button
+  relative
+  px-10 py-2
+  rounded-2xl
+  text-lg font-semibold text-white
+  bg-gradient-to-r from-fuchsia-500 via-purple-600 to-indigo-600
+  shadow-[0_8px_30px_rgba(128,0,255,0.6)]
+  transition-all duration-300 ease-out
+  hover:scale-105
+  hover:shadow-[0_12px_30px_rgba(128,0,255,0.6)]
+  hover:brightness-110
+  active:scale-95
+">
+                            Login                        </button>
                     </div>
 
                 </div>

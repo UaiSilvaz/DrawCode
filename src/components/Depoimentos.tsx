@@ -38,7 +38,7 @@ export default function Depoimentos() {
                     {testimonials.map((testimonial, index) => (
                         <div key={index} className="bg-gray-50 dark:bg-gray-800 p-8 rounded-xl">
                             <div className="flex items-center mb-4">
-                                <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold mr-4">
+                                <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold mr-4">
                                     {testimonial.avatar}
                                 </div>
                                 <div>

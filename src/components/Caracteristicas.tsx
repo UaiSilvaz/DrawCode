@@ -9,32 +9,32 @@ gsap.registerPlugin(ScrollTrigger);
 export default function Caracteristicas() {
     const features = [
         {
-            icon: '🎨',
+            img: '/paintbrush.png',
             title: 'Editor Visual de Layouts',
             description: 'Crie interfaces de forma visual, arrastando elementos e montando layouts sem escrever código.'
         },
         {
-            icon: '💻',
+            img: '/monitor.png',
             title: 'Geração Automática de Código',
             description: 'Transforme seus layouts em código HTML, CSS e JavaScript em tempo real.'
         },
         {
-            icon: '🤖',
+            img: '/robo.png',
             title: 'Assistente com IA',
             description: 'Receba sugestões inteligentes para melhorar seu código e aprender boas práticas de Front-End.'
         },
         {
-            icon: '📚',
+            img: '/reading-book.png',
             title: 'Aprendizado Prático',
             description: 'Aprenda Front-End na prática, vendo o código nascer conforme você constrói o layout.'
         },
         {
-            icon: '🔄',
+            img: '/hourglass.png',
             title: 'Edição e Visualização em Tempo Real',
             description: 'Edite, teste e visualize suas alterações instantaneamente, sem recarregar a página.'
         },
         {
-            icon: '🌐',
+            img: '/globalization.png',
             title: 'Exportação e Compartilhamento',
             description: 'Exporte seus projetos ou compartilhe com outros usuários para estudar e evoluir.'
         }
@@ -82,7 +82,7 @@ export default function Caracteristicas() {
             const cards = cardsRef.current?.children;
             if (cards) {
                 Array.from(cards).forEach((card, index) => {
-                    const icon = card.querySelector('.feature-icon');
+                    const icon = card.querySelector('.feature-icon img');
                     if (icon) {
                         card.addEventListener('mouseenter', () => {
                             gsap.to(icon, {
@@ -122,7 +122,9 @@ export default function Caracteristicas() {
                 <div ref={cardsRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {features.map((feature, index) => (
                         <div key={index} className="bg-gray-50 dark:bg-gray-800 p-8 rounded-xl hover:shadow-lg transition-all duration-300 hover:scale-105">
-                            <div className="feature-icon text-4xl mb-4">{feature.icon}</div>
+                            <div className="feature-icon mb-4 flex justify-center">
+                                <img src={feature.img} alt={feature.title} className="w-16 h-16 object-contain filter brightness-0 invert" />
+                            </div>
                             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
                                 {feature.title}
                             </h3>
