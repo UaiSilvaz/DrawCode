@@ -1,4 +1,6 @@
 import dynamic from 'next/dynamic';
+import Link from "next/link";
+
 
 const Silk = dynamic(() => import('./Silk'), { ssr: true });
 
@@ -45,22 +47,25 @@ export default function Topo() {
 
                     {/* Botões */}
                     <div className="flex flex-col sm:flex-row gap-3 justify-center mt-3">
-                        <button
+                        <Link
+                            href="/login"
                             className="
-        relative
-        px-9 py-3
-        rounded-2xl
-        text-base font-semibold text-white
-        bg-gradient-to-r from-fuchsia-500 via-purple-600 to-indigo-600
-        shadow-[0_10px_25px_rgba(128,0,255,0.6)]
-        transition-all duration-300 ease-out
-        hover:scale-105
-        hover:brightness-110
-        active:scale-95
-      "
+    relative
+    px-9 py-3
+    rounded-2xl
+    text-base font-semibold text-white
+    bg-gradient-to-r from-fuchsia-500 via-purple-600 to-indigo-600
+    shadow-[0_10px_25px_rgba(128,0,255,0.6)]
+    transition-all duration-300 ease-out
+    hover:scale-105
+    hover:brightness-110
+    active:scale-95
+    inline-flex items-center justify-center
+  "
                         >
                             Comece a criar
-                        </button>
+                        </Link>
+
 
                         <button
                             className="

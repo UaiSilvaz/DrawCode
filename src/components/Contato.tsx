@@ -57,7 +57,7 @@ export default function Contato() {
                         </div>
                         <button
                             type="submit"
-                            className="w-full bg-purple-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-semibold transition-colors"
+                            className="w-full bg-purple-600 hover:bg-white-purple-700 text-white py-3 px-6 rounded-lg font-semibold transition-colors"
                         >
                             Enviar Mensagem
                         </button>

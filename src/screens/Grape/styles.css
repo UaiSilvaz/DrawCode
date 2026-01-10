@@ -1,0 +1,42 @@
+html,
+body {
+    margin: 0;
+    height: 100%;
+}
+
+#gjs {
+    height: 100vh;
+    width: 100%;
+}
+
+.gjs-wrapper {
+    height: 100vh;
+    width: 100%;
+}
+
+.gjs-cv-canvas {
+    top: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.gjs-block {
+    width: auto;
+    min-height: auto;
+}
+
+.gjs-one-bg {
+    background-color: #0f172a;
+}
+
+.gjs-two-color {
+    color: #fff;
+}
+
+.gjs-pn-panel {
+    background: #020617;
+}
+
+.gjs-pn-buttons .gjs-pn-btn {
+    color: white;
+}
