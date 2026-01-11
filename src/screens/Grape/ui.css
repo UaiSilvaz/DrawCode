@@ -1,0 +1,70 @@
+.draw-layout {
+    display: flex;
+    height: 100vh;
+    background: #0b0d17;
+}
+
+.draw-sidebar {
+    width: 230px;
+    background: #0f1220;
+    color: white;
+    padding: 10px;
+    overflow-y: auto;
+}
+
+.draw-right {
+    width: 280px;
+    background: #0f1220;
+    color: white;
+    overflow-y: auto;
+}
+
+.draw-canvas-wrapper {
+    width: 97%;
+    height: 97%;
+    position: relative;
+}
+
+.draw-canvas {
+    width: 100%;
+    height: 100%;
+}
+
+
+#gjs {
+    width: 100%;
+    height: 100%;
+    background: #fff;
+}
+
+/* Container principal do editor */
+.gjs-editor-cont,
+.gjs-editor,
+.gjs-cv-canvas,
+.gjs-frame-wrapper,
+.gjs-frame {
+    width: 100% !important;
+    height: 100% !important;
+    background: transparent !important;
+}
+
+/* Iframe interno do Grapes */
+.gjs-frame {
+    border-radius: 18px;
+    overflow: hidden;
+}
+
+/* BODY da página editada */
+.gjs-frame body {
+    width: 100% !important;
+    min-height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Remove qualquer área cinza lateral */
+.gjs-cv-canvas {
+    display: flex !important;
+    justify-content: center;
+    align-items: center;
+}

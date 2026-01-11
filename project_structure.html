@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DrawCode-6 Project Structure</title>
+    <style>
+        body {
+            font-family: monospace;
+        }
+
+        pre {
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>DrawCode-6 Project Structure</h1>
+    <pre>
+DrawCode-6/
+├── .gitignore
+│   # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+│   
+│   # dependencies
+│   /node_modules
+│   /.pnp
+│   .pnp.js
+│   
+│   # testing
+│   /coverage
+│   
+│   # next.js
+│   /.next/
+│   /out/
+│   
+│   # production
+│   /build
+│   
+│   # misc
+│   .DS_Store
+│   *.pem
+│   
+│   # debug
+│   npm-debug.log*
+│   yarn-debug.log*
+│   yarn-error.log*
+│   
+│   # local env files
+│   .env*.local
+│   
+│   # vercel
+│   .vercel
+│   
+│   # typescript
+│   *.tsbuildinfo
+│   next-env.d.ts
+├── components.json
+│   {
+│     "$schema": "https://ui.shadcn.com/schema.json",
+│     "style": "new-york",
+│     "rsc": true,
+│     "tsx": true,
+│     "tailwind": {
+│       "config": "",
+│       "css": "src/app/globals.css",
+│       "baseColor": "neutral",
+│       "cssVariables": true,
+│       "prefix": ""
+│     },
+│     "iconLibrary": "lucide",
+│     "aliases": {
+│       "components": "@/components",
+│       "utils": "@/lib/utils",
+│       "ui": "@/components/ui",
+│       "lib": "@/lib",
+│       "hooks": "@/hooks"
+│     },
+│     "registries": {
+│       "@magicui": "https://magicui.design/r/{name}.json",
+│       "@react-bits": "https://reactbits.dev/r/{name}.json"
+│     }
+│   }
+├── eslint.config.mjs
+│   import { defineConfig, globalIgnores } from "eslint/config";
+│   import nextVitals from "eslint-config-next/core-web-vitals";
+│   import nextTs from "eslint-config-next/typescript";
+│   
+│   const eslintConfig = defineConfig([
+│     ...nextVitals,
