@@ -1,71 +1,74 @@
-'use client';
+import "./hero.css";
 
-import { useState } from 'react';
-
-export default function Login() {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        // Handle login logic here
-        console.log('Login attempt:', { email, password });
-    };
-
+export default function Home() {
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-            <div className="max-w-md w-full space-y-8 p-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
-                <div>
-                    <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
-                        Entrar na sua conta
-                    </h2>
-                </div>
-                <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-                    <div className="rounded-md shadow-sm -space-y-px">
-                        <div>
-                            <label htmlFor="email" className="sr-only">
-                                Email
-                            </label>
-                            <input
-                                id="email"
-                                name="email"
-                                type="email"
-                                autoComplete="email"
-                                required
-                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                                placeholder="Email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                            />
+        <section className="hero">
+            <div className="glow"></div>
+
+            <div className="container">
+
+                {/* TEXTO */}
+                <div className="content">
+
+                    <div className="badge">
+                        <div className="avatars">
+                            <img src="https://i.pravatar.cc/40?img=1" />
+                            <img src="https://i.pravatar.cc/40?img=2" />
+                            <img src="https://i.pravatar.cc/40?img=3" />
                         </div>
-                        <div>
-                            <label htmlFor="password" className="sr-only">
-                                Senha
-                            </label>
-                            <input
-                                id="password"
-                                name="password"
-                                type="password"
-                                autoComplete="current-password"
-                                required
-                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                                placeholder="Senha"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                            />
-                        </div>
+                        <span>Join community of 1m+ founders</span>
                     </div>
 
-                    <div>
-                        <button
-                            type="submit"
-                            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                        >
-                            Entrar
-                        </button>
+                    <h1>
+                        Ready to Transform <br />
+                        <span>Your Digital Experience?</span>
+                    </h1>
+
+                    <p>
+                        Let our design team craft a website that elevates your brand.
+                        Book a free session today.
+                    </p>
+
+                </div>
+
+                {/* FORM */}
+                <div className="card">
+
+                    <div className="image-box">
+                        <span>IMAGE HERE</span>
                     </div>
-                </form>
+
+                    <form>
+
+                        <div className="field">
+                            <label>Name</label>
+                            <input placeholder="Eden Johnson" />
+                        </div>
+
+                        <div className="field">
+                            <label>Email</label>
+                            <input placeholder="Eden@example.com" />
+                        </div>
+
+                        <div className="field">
+                            <label>Message</label>
+                            <textarea placeholder="Write your message here..." />
+                        </div>
+
+                        <div className="bottom">
+                            <p>
+                                By submitting, you agree to our <strong>Terms</strong> and{" "}
+                                <strong>Privacy Policy</strong>.
+                            </p>
+
+                            <button type="submit">Submit</button>
+                        </div>
+
+                    </form>
+
+                </div>
+
             </div>
-        </div>
+        </section>
     );
 }
