@@ -2,7 +2,7 @@ import "./hero.css";
 
 export default function Login() {
     return (
-        <section className="hero">
+        <section className="hero modal">
             <div className="glow"></div>
 
             <div className="container">
