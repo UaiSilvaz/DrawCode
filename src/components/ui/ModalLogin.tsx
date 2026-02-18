@@ -1,31 +1,44 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Login from "@/screens/Login";
 import "./modal.css";
 
 type ModalLoginProps = {
     open: boolean;
     onClose: () => void;
+    initialMode?: "login" | "signup";
 };
 
-export default function ModalLogin({ open, onClose }: ModalLoginProps) {
-    const [visible, setVisible] = useState(open);
+export default function ModalLogin({ open, onClose, initialMode = "login" }: ModalLoginProps) {
+    const [mode, setMode] = useState<"login" | "signup">(initialMode);
+    const prevOpenRef = useRef(open);
+    const [, startTransition] = useTransition();
 
     useEffect(() => {
-        if (open) {
-            setVisible(true);
+        if (open && !prevOpenRef.current) {
+            startTransition(() => {
+                setMode(initialMode);
+            });
         }
-    }, [open]);
+        prevOpenRef.current = open;
+    }, [open, initialMode]);
 
     function handleClose() {
-        setVisible(false);
         setTimeout(() => {
             onClose();
         }, 300);
     }
 
-    if (!open && !visible) return null;
+    function handleSwitchToSignUp() {
+        setMode("signup");
+    }
+
+    function handleSwitchToLogin() {
+        setMode("login");
+    }
+
+    if (!open) return null;
 
     return (
         <div
@@ -36,8 +49,12 @@ export default function ModalLogin({ open, onClose }: ModalLoginProps) {
                 className={`modal-box ${open ? "show" : "hide"}`}
                 onClick={(e) => e.stopPropagation()}
             >
-                <button className="modal-close" onClick={handleClose}>✕</button>
-                <Login />
+                <Login
+                    initialMode={mode}
+                    onSwitchToSignUp={handleSwitchToSignUp}
+                    onSwitchToLogin={handleSwitchToLogin}
+                    onClose={handleClose}
+                />
             </div>
         </div>
     );

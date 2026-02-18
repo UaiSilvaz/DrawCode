@@ -1,22 +1,26 @@
 /* Overlay */
 .modal-overlay {
     position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0);
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(10px);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 9999;
+    z-index: 9998;
 
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.35s ease;
+    cursor: default;
 }
 
 .modal-overlay.show {
     opacity: 1;
-    pointer-events: all;
+    pointer-events: auto;
 }
 
 .modal-overlay.hide {
@@ -26,54 +30,49 @@
 
 /* Caixa do modal */
 .modal-box {
-    background: rgba(20, 20, 30, 0.65);
-    backdrop-filter: blur(28px);
-    border-radius: 18px;
-
-    width: 100%;
-    max-width: 950px;
-    height: 80vh;
+    width: 90%;
+    height: auto;
 
     position: relative;
-    overflow: hidden;
-
     display: flex;
+    flex-direction: column;
     align-items: center;
-    /* centraliza vertical */
-    justify-content: center;
-    /* centraliza horizontal */
+    justify-content: flex-start;
 
-    transform: scale(0.9) translateY(20px);
+    transform: scale(0.9);
     opacity: 0;
     transition: all 0.3s ease;
+    pointer-events: none;
 }
 
 /* Entrada */
 .modal-box.show {
-    transform: scale(1) translateY(0);
+    transform: scale(1);
     opacity: 1;
+    pointer-events: auto;
 }
 
 /* Saída */
 .modal-box.hide {
-    transform: scale(0.85) translateY(30px);
+    transform: scale(0.85);
     opacity: 0;
+    pointer-events: none;
 }
 
 /* Botão fechar */
 .modal-close {
     position: absolute;
-    top: 18px;
-    right: 22px;
+    top: 20px;
+    right: 20px;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.15);
     color: white;
-    font-size: 22px;
-    width: 38px;
-    height: 38px;
-    border-radius: 12px;
+    font-size: 20px;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
     cursor: pointer;
-    z-index: 5;
+    z-index: 10;
 
     display: flex;
     align-items: center;
@@ -83,12 +82,20 @@
 }
 
 .modal-close:hover {
-    background: rgba(187, 0, 224, 0.25);
+    background: rgba(187, 0, 224, 0.3);
     transform: scale(1.1);
+    border-color: rgba(187, 0, 224, 0.5);
 }
 
 .modal-close:active {
     transform: scale(0.95);
+}
+
+/* Posicionar o botão dentro do card no modo modal */
+.hero.modal .modal-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
 }
 
 /* Responsivo */

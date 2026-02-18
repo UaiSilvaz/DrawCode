@@ -1,13 +1,51 @@
-import "./hero.css";
+"use client";
 
-export default function Login() {
+import { useEffect, useState } from "react";
+import "./hero.css";
+import Cadastro from "../Cadastro";
+
+interface LoginProps {
+    initialMode?: "login" | "signup";
+    onSwitchToSignUp?: () => void;
+    onSwitchToLogin?: () => void;
+    onClose?: () => void;
+}
+
+export default function Login({ initialMode = "login", onSwitchToSignUp, onSwitchToLogin, onClose }: LoginProps) {
+    const [isSignUp, setIsSignUp] = useState(initialMode === "signup");
+    const [showPassword, setShowPassword] = useState(false);
+
+    useEffect(() => {
+        setIsSignUp(initialMode === "signup");
+    }, [initialMode]);
+
+    const handleSwitchToSignUp = () => {
+        if (onSwitchToSignUp) {
+            onSwitchToSignUp();
+        } else {
+            setIsSignUp(true);
+        }
+    };
+
+    const handleSwitchToLogin = () => {
+        if (onSwitchToLogin) {
+            onSwitchToLogin();
+        } else {
+            setIsSignUp(false);
+        }
+    };
+
+    if (isSignUp) {
+        return <Cadastro onSwitchToLogin={handleSwitchToLogin} onClose={onClose} />;
+    }
+
     return (
         <section className="hero modal">
             <div className="glow"></div>
 
             <div className="container">
 
-                {/* TEXTO */}
+
                 <div className="content">
 
                     <div className="badge">
@@ -16,7 +54,7 @@ export default function Login() {
                             <img src="https://i.pravatar.cc/40?img=2" />
                             <img src="https://i.pravatar.cc/40?img=3" />
                         </div>
-                        <span>Join community of 1m+ founders</span>
+                        <span>Junte-se à comunidade de 1m+ criadores</span>
                     </div>
 
                     <h1>
@@ -32,12 +70,13 @@ export default function Login() {
 
                 </div>
 
-                {/* FORM */}
+
                 <div className="card">
+                    {onClose && <button className="modal-close" onClick={onClose}>✕</button>}
 
                     <div className="social-box">
 
-                        <p className="social-title">Login with</p>
+                        <p className="social-title">Login com</p>
 
                         <div className="social-buttons">
 
@@ -53,7 +92,7 @@ export default function Login() {
                             </button>
 
                             <button type="button" className="social-btn x">
-                                {/* X / Twitter */}
+
                                 <svg viewBox="0 0 24 24" width="22" height="22">
                                     <path fill="currentColor" d="M18.24 2H21l-6.38 7.29L22 22h-6.78l-5.3-7.32L3.7 22H1l6.82-7.8L2 2h6.95l4.8 6.6L18.24 2z" />
                                 </svg>
@@ -61,7 +100,7 @@ export default function Login() {
                             </button>
 
                             <button type="button" className="social-btn facebook">
-                                {/* Facebook */}
+
                                 <svg viewBox="0 0 24 24" width="22" height="22">
                                     <path fill="currentColor" d="M24 12c0-6.63-5.37-12-12-12S0 5.37 0 12c0 6 4.39 10.98 10.12 11.85v-8.39H7.08V12h3.04V9.41c0-3.02 1.79-4.7 4.53-4.7 1.31 0 2.68.24 2.68.24v2.96h-1.51c-1.49 0-1.95.92-1.95 1.87V12h3.32l-.53 3.46h-2.79v8.39C19.61 22.98 24 18 24 12z" />
                                 </svg>
@@ -71,7 +110,7 @@ export default function Login() {
                         </div>
 
                         <div className="social-divider">
-                            <span>or login with email</span>
+                            <span>ou faça login com email</span>
                         </div>
 
                     </div>
@@ -81,24 +120,57 @@ export default function Login() {
 
                         <div className="field">
                             <label>Email</label>
-                            <input type="email" placeholder="your@email.com" />
+                            <input type="email" placeholder="seu@email.com" />
                         </div>
 
                         <div className="field">
                             <label>Senha</label>
-                            <input type="password" placeholder="Enter your password" />
+                            <div className="password-input-wrapper">
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    placeholder="Digite sua senha"
+                                />
+                                <button
+                                    type="button"
+                                    className="toggle-password"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    tabIndex={-1}
+                                >
+                                    {showPassword ? (
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                            <circle cx="12" cy="12" r="3" />
+                                        </svg>
+                                    ) : (
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                                            <line x1="1" y1="1" x2="23" y2="23" />
+                                        </svg>
+                                    )}
+                                </button>
+                            </div>
                         </div>
 
                         <div className="bottom">
                             <p>
-                                By logging in, you agree to our <strong>Terms</strong> and{" "}
-                                <strong>Privacy Policy</strong>.
+                                Ao fazer login, você concorda com nossos <strong>Termos</strong> e{" "}
+                                <strong>Política de Privacidade</strong>.
                             </p>
 
                             <button type="submit">Login</button>
                         </div>
 
                     </form>
+
+                    <div className="signup-link">
+                        <p>Não tem uma conta? <button
+                            type="button"
+                            onClick={handleSwitchToSignUp}
+                            style={{ background: "none", border: "none", color: "inherit", cursor: "pointer", textDecoration: "underline" }}
+                        >
+                            Cadastre-se aqui
+                        </button></p>
+                    </div>
 
                 </div>
 

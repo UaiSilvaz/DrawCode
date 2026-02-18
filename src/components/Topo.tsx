@@ -1,14 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import ModalLogin from "./ui/ModalLogin";
-
+import { useModal } from "@/context/ModalContext";
 import dynamic from "next/dynamic";
 
 const Silk = dynamic(() => import("./Silk"), { ssr: true });
 
 export default function Topo() {
-    const [openLogin, setOpenLogin] = useState(false);
+    const { openLogin, openSignup } = useModal();
 
     return (
         <>
@@ -53,7 +51,7 @@ export default function Topo() {
 
                             {/* LOGIN */}
                             <button
-                                onClick={() => setOpenLogin(true)}
+                                onClick={openLogin}
                                 className="
                   relative
                   px-9 py-3
@@ -73,6 +71,7 @@ export default function Topo() {
 
                             {/* CADASTRO */}
                             <button
+                                onClick={openSignup}
                                 className="
                   border-2 border-gray-300 dark:border-gray-600
                   text-gray-700 dark:text-gray-300
@@ -106,12 +105,6 @@ export default function Topo() {
                     </svg>
                 </div>
             </section>
-
-            {/* MODAL */}
-            <ModalLogin
-                open={openLogin}
-                onClose={() => setOpenLogin(false)}
-            />
         </>
     );
 }

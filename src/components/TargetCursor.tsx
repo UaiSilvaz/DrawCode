@@ -8,6 +8,7 @@ export interface TargetCursorProps {
   hideDefaultCursor?: boolean;
   hoverDuration?: number;
   parallaxOn?: boolean;
+  enableCaretAnimation?: boolean;
 }
 
 const TargetCursor: React.FC<TargetCursorProps> = ({
@@ -16,11 +17,14 @@ const TargetCursor: React.FC<TargetCursorProps> = ({
   hideDefaultCursor = true,
   hoverDuration = 0.2,
   parallaxOn = true,
+  enableCaretAnimation = false,
 }) => {
   const cursorRef = useRef<HTMLDivElement>(null);
   const cornersRef = useRef<NodeListOf<HTMLDivElement> | null>(null);
   const spinTl = useRef<gsap.core.Timeline | null>(null);
   const dotRef = useRef<HTMLDivElement>(null);
+  const caretRef = useRef<HTMLDivElement>(null);
+  const isTypingRef = useRef(false);
 
   const isActiveRef = useRef(false);
   const targetCornerPositionsRef = useRef<{ x: number; y: number }[] | null>(
@@ -164,6 +168,51 @@ const TargetCursor: React.FC<TargetCursorProps> = ({
     window.addEventListener("mousedown", mouseDownHandler);
     window.addEventListener("mouseup", mouseUpHandler);
 
+    // Caret animation handlers (can be disabled by setting enableCaretAnimation to false)
+    const handleInputFocus = (e: FocusEvent) => {
+      if (!enableCaretAnimation || !caretRef.current) return;
+      isTypingRef.current = true;
+      gsap.to(caretRef.current, { opacity: 1, duration: 0.2 });
+      gsap.fromTo(
+        caretRef.current,
+        { opacity: 1 },
+        { opacity: 0, duration: 0.6, repeat: -1, yoyo: true }
+      );
+    };
+
+    const handleInputBlur = () => {
+      if (!enableCaretAnimation || !caretRef.current) return;
+      isTypingRef.current = false;
+      gsap.killTweensOf(caretRef.current);
+      gsap.to(caretRef.current, { opacity: 0, duration: 0.2 });
+    };
+
+    if (enableCaretAnimation) {
+      const inputs = document.querySelectorAll("input, textarea");
+      inputs.forEach((input) => {
+        input.addEventListener("focus", handleInputFocus);
+        input.addEventListener("blur", handleInputBlur);
+      });
+    }
+
+    const elementsObserver = new MutationObserver(() => {
+      if (!enableCaretAnimation) return;
+      const inputs = document.querySelectorAll("input, textarea");
+      inputs.forEach((input) => {
+        input.removeEventListener("focus", handleInputFocus);
+        input.removeEventListener("blur", handleInputBlur);
+        input.addEventListener("focus", handleInputFocus);
+        input.addEventListener("blur", handleInputBlur);
+      });
+    });
+
+    if (enableCaretAnimation) {
+      elementsObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
+      });
+    }
+
     const enterHandler = (e: MouseEvent) => {
       const directTarget = e.target as Element;
       const allTargets: Element[] = [];
@@ -301,6 +350,17 @@ const TargetCursor: React.FC<TargetCursorProps> = ({
       window.removeEventListener("scroll", scrollHandler);
       window.removeEventListener("mousedown", mouseDownHandler);
       window.removeEventListener("mouseup", mouseUpHandler);
+
+      // Cleanup caret animation listeners
+      if (enableCaretAnimation) {
+        const inputs = document.querySelectorAll("input, textarea");
+        inputs.forEach((input) => {
+          input.removeEventListener("focus", handleInputFocus);
+          input.removeEventListener("blur", handleInputBlur);
+        });
+        elementsObserver.disconnect();
+      }
+
       if (activeTarget) {
         cleanupTarget(activeTarget);
       }
@@ -319,6 +379,7 @@ const TargetCursor: React.FC<TargetCursorProps> = ({
     isMobile,
     hoverDuration,
     parallaxOn,
+    enableCaretAnimation,
   ]);
 
   useEffect(() => {
@@ -348,6 +409,13 @@ const TargetCursor: React.FC<TargetCursorProps> = ({
         className="absolute top-1/2 left-1/2 w-1 h-1 bg-white rounded-full -translate-x-1/2 -translate-y-1/2"
         style={{ willChange: "transform" }}
       />
+      {enableCaretAnimation && (
+        <div
+          ref={caretRef}
+          className="absolute top-1/2 left-1/2 w-0.5 h-3 bg-white -translate-x-1/2 -translate-y-1/2 opacity-0"
+          style={{ willChange: "opacity" }}
+        />
+      )}
       <div
         className="target-cursor-corner absolute top-1/2 left-1/2 w-3 h-3 border-[3px] border-white -translate-x-[150%] -translate-y-[150%] border-r-0 border-b-0"
         style={{ willChange: "transform" }}

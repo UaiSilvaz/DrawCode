@@ -49,6 +49,7 @@ body {
 }
 
 
+
 .badge {
     display: inline-flex;
     align-items: center;
@@ -232,9 +233,10 @@ form {
 }
 
 .bottom p {
-    font-size: 11px;
-    color: #aaa;
+    font-size: 12px;
+    color: #ccc;
     max-width: 230px;
+    line-height: 1.4;
 }
 
 
@@ -243,11 +245,12 @@ form {
     background: linear-gradient(90deg, #bb00e0, #7b2cff, #4f46e5);
     border: none;
     color: white;
-    padding: 14px 34px;
+    padding: 10px 40px;
     border-radius: 16px;
     cursor: pointer;
     font-weight: 600;
     font-size: 15px;
+    white-space: nowrap;
 
     box-shadow: 0 10px 25px rgba(128, 0, 255, .6);
     transition: all .3s ease-out;
@@ -327,22 +330,6 @@ form {
 .toggle-password svg {
     width: 20px;
     height: 20px;
-}
-
-/* Signup link */
-.signup-link {
-    text-align: center;
-    margin-top: 20px;
-    font-size: 14px;
-}
-
-.signup-link button {
-    color: #bb00e0;
-    font-weight: 600;
-}
-
-.signup-link button:hover {
-    color: #4f46e5;
 }
 
 /* Estilos para quando está dentro de um modal */

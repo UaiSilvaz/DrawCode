@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useModal } from "@/context/ModalContext";
+import TargetCursor from "./TargetCursor";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -12,6 +15,7 @@ export default function Cabecalho() {
   const logoRef = useRef<HTMLDivElement>(null);
   const linksRef = useRef<HTMLDivElement>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
+  const { openLogin, openSignup } = useModal();
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -117,57 +121,64 @@ export default function Cabecalho() {
   }, []);
 
   return (
-    <nav
-      ref={navRef}
-      className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-gray-200 dark:bg-dark/80 dark:border-gray-800"
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <div ref={logoRef}>
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <img
-                  src="/IconD.png"
-                  alt="Icon"
-                  className="w-full h-full object-cover scale-150"
-                />
-              </div>
-              <div>
-                <span className="text-xl font-bold text-gray-900 dark:text-white">
-                  Draw Code
-                </span>
-              </div>
-            </Link>
-          </div>
+    <>
+      <TargetCursor />
+      <nav
+        ref={navRef}
+        className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-gray-200 dark:bg-dark/80 dark:border-gray-800"
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div ref={logoRef}>
+              <Link href="/" className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-linear-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                  <Image
+                    src="/IconD.png"
+                    alt="Icon"
+                    width={12}
+                    height={12}
+                    className="w-full h-full object-cover scale-150"
+                  />
+                </div>
+                <div>
+                  <span className="text-xl font-bold text-gray-900 dark:text-white">
+                    Draw Code
+                  </span>
+                </div>
+              </Link>
+            </div>
 
-          <div ref={linksRef} className="hidden md:flex items-center space-x-8">
-            {["Inicio", "Funções", "Preços", "Depoimentos", "Contato"].map(
-              (item, index) => (
-                <Link
-                  key={index}
-                  href={`#${item.toLowerCase()}`}
-                  className="nav-hover cursor-target text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                >
-                  {item}
-                </Link>
-              ),
-            )}
-          </div>
+            <div ref={linksRef} className="hidden md:flex items-center space-x-8">
+              {["Inicio", "Funções", "Preços", "Depoimentos", "Contato"].map(
+                (item, index) => (
+                  <Link
+                    key={index}
+                    href={`#${item.toLowerCase()}`}
+                    className="nav-hover cursor-target text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                  >
+                    {item}
+                  </Link>
+                ),
+              )}
+            </div>
 
-          <div ref={actionsRef} className="flex items-center space-x-4">
-            <button className="nav-hover cursor-target text-gray-700 dark:text-gray-300 hover:text-blue-600 transition-colors">
-              Cadastrar
-            </button>
-            <Link
-              href="/login"
-              className="
+            <div ref={actionsRef} className="flex items-center space-x-4">
+              <button
+                onClick={openSignup}
+                className="nav-hover cursor-target text-gray-700 dark:text-gray-300 hover:text-blue-600 transition-colors"
+              >
+                Cadastrar
+              </button>
+              <button
+                onClick={openLogin}
+                className="
   login-button
   cursor-target
   relative
   px-10 py-2
   rounded-2xl
   text-lg font-semibold text-white
-  bg-gradient-to-r from-fuchsia-500 via-purple-600 to-indigo-600
+  bg-linear-to-r from-fuchsia-500 via-purple-600 to-indigo-600
   shadow-[0_8px_30px_rgba(128,0,255,0.6)]
   transition-all duration-300 ease-out
   hover:scale-105
@@ -175,12 +186,13 @@ export default function Cabecalho() {
   hover:brightness-110
   active:scale-95
 "
-            >
-              Login{" "}
-            </Link>
+              >
+                Login{" "}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    </nav>
+      </nav>
+    </>
   );
 }
