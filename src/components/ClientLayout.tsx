@@ -3,6 +3,7 @@
 import ConditionalTargetCursor from './ConditionalTargetCursor';
 import GlobalModals from './GlobalModals';
 import { ModalProvider } from '@/context/ModalContext';
+import AuthSessionProvider from './AuthSessionProvider';
 
 export default function ClientLayout({
     children,
@@ -10,10 +11,12 @@ export default function ClientLayout({
     children: React.ReactNode;
 }) {
     return (
-        <ModalProvider>
-            {children}
-            <ConditionalTargetCursor />
-            <GlobalModals />
-        </ModalProvider>
+        <AuthSessionProvider>
+            <ModalProvider>
+                {children}
+                <ConditionalTargetCursor />
+                <GlobalModals />
+            </ModalProvider>
+        </AuthSessionProvider>
     );
 }

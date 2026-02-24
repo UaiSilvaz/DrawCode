@@ -3,7 +3,7 @@
 import { useModal } from "@/context/ModalContext";
 import dynamic from "next/dynamic";
 
-const Silk = dynamic(() => import("./Silk"), { ssr: true });
+const Silk = dynamic(() => import("@/components/Silk"), { ssr: true });
 
 export default function Topo() {
     const { openLogin, openSignup } = useModal();

@@ -2,18 +2,25 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import Login from "@/screens/Login";
+import Cadastro from "@/screens/Cadastro";
 import "./modal.css";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 type ModalLoginProps = {
     open: boolean;
     onClose: () => void;
     initialMode?: "login" | "signup";
+    callbackUrl?: string;
 };
 
-export default function ModalLogin({ open, onClose, initialMode = "login" }: ModalLoginProps) {
+export default function ModalLogin({ open, onClose, initialMode = "login", callbackUrl = "/dashboard" }: ModalLoginProps) {
     const [mode, setMode] = useState<"login" | "signup">(initialMode);
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
     const prevOpenRef = useRef(open);
     const [, startTransition] = useTransition();
+    const router = useRouter();
 
     useEffect(() => {
         if (open && !prevOpenRef.current) {
@@ -24,18 +31,71 @@ export default function ModalLogin({ open, onClose, initialMode = "login" }: Mod
         prevOpenRef.current = open;
     }, [open, initialMode]);
 
+    const handleLogin = async (email: string, password: string) => {
+        setLoading(true);
+        setError("");
+        const res = await signIn('credentials', {
+            email,
+            password,
+            redirect: false,
+        });
+        setLoading(false);
+        if (res?.error) {
+            setError('Email ou senha incorretos.');
+        } else {
+            handleClose();
+            router.push(callbackUrl);
+        }
+    };
+
+    const handleSocialLogin = (provider: 'google' | 'facebook' | 'twitter') => {
+        signIn(provider, { callbackUrl });
+    };
+
     function handleClose() {
         setTimeout(() => {
             onClose();
         }, 300);
     }
 
+    const handleRegister = async (name: string, email: string, password: string) => {
+        setLoading(true);
+        setError("");
+
+        try {
+            const res = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, password }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                setError(data.error ?? 'Erro ao criar conta.');
+                setLoading(false);
+                return;
+            }
+
+            // Faz login automático após registro
+            await signIn('credentials', { email, password, redirect: false });
+            handleClose();
+            router.push(callbackUrl);
+        } catch {
+            setError('Erro de conexão. Tente novamente.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     function handleSwitchToSignUp() {
         setMode("signup");
+        setError("");
     }
 
     function handleSwitchToLogin() {
         setMode("login");
+        setError("");
     }
 
     if (!open) return null;
@@ -49,12 +109,27 @@ export default function ModalLogin({ open, onClose, initialMode = "login" }: Mod
                 className={`modal-box ${open ? "show" : "hide"}`}
                 onClick={(e) => e.stopPropagation()}
             >
-                <Login
-                    initialMode={mode}
-                    onSwitchToSignUp={handleSwitchToSignUp}
-                    onSwitchToLogin={handleSwitchToLogin}
-                    onClose={handleClose}
-                />
+                {mode === "login" ? (
+                    <Login
+                        initialMode={mode}
+                        onSwitchToSignUp={handleSwitchToSignUp}
+                        onSwitchToLogin={handleSwitchToLogin}
+                        onClose={handleClose}
+                        onLogin={handleLogin}
+                        onSocialLogin={handleSocialLogin}
+                        error={error}
+                        loading={loading}
+                    />
+                ) : (
+                    <Cadastro
+                        onSwitchToLogin={handleSwitchToLogin}
+                        onClose={handleClose}
+                        onRegister={handleRegister}
+                        onSocialLogin={handleSocialLogin}
+                        error={error}
+                        loading={loading}
+                    />
+                )}
             </div>
         </div>
     );

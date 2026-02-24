@@ -11,8 +11,6 @@ body {
     color: white;
 }
 
-
-
 .hero {
     min-height: 100vh;
     display: flex;
@@ -33,8 +31,6 @@ body {
     opacity: 0.45;
 }
 
-
-
 .container {
     display: flex;
     gap: 80px;
@@ -47,7 +43,6 @@ body {
 .content {
     max-width: 480px;
 }
-
 
 .badge {
     display: inline-flex;
@@ -78,8 +73,6 @@ body {
     margin-left: 0;
 }
 
-
-
 h1 {
     font-size: 38px;
     font-weight: 500;
@@ -100,8 +93,6 @@ p {
     line-height: 1.6;
 }
 
-
-
 .card {
     background: rgba(255, 0, 200, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -111,8 +102,6 @@ p {
     width: 460px;
     box-shadow: 0 0 40px rgba(187, 0, 224, 0.15);
 }
-
-
 
 .social-box {
     margin-bottom: 22px;
@@ -139,10 +128,8 @@ p {
     display: flex;
     align-items: center;
     justify-content: center;
-
     background: linear-gradient(90deg, #bb00e0, #7b2cff, #4f46e5);
     box-shadow: 0 10px 25px rgba(128, 0, 255, 0.6);
-
     color: white;
     cursor: pointer;
     transition: all 0.3s ease-out;
@@ -162,8 +149,6 @@ p {
     height: 20px;
     fill: currentColor;
 }
-
-
 
 .social-divider {
     margin-top: 18px;
@@ -190,12 +175,10 @@ p {
     right: 0;
 }
 
-
-
 form {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 14px;
 }
 
 .field label {
@@ -221,34 +204,31 @@ form {
     box-shadow: 0 0 0 2px rgba(187, 0, 224, .25);
 }
 
-
-
 .bottom {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-top: 10px;
+    margin-top: 18px;
     gap: 10px;
 }
 
 .bottom p {
-    font-size: 11px;
-    color: #aaa;
+    font-size: 12px;
+    color: #ccc;
     max-width: 230px;
+    line-height: 1.4;
 }
-
-
 
 .bottom button {
     background: linear-gradient(90deg, #bb00e0, #7b2cff, #4f46e5);
     border: none;
     color: white;
-    padding: 14px 34px;
+    padding: 10px 40px;
     border-radius: 16px;
     cursor: pointer;
     font-weight: 600;
     font-size: 15px;
-
+    white-space: nowrap;
     box-shadow: 0 10px 25px rgba(128, 0, 255, .6);
     transition: all .3s ease-out;
 }
@@ -261,8 +241,6 @@ form {
 .bottom button:active {
     transform: scale(0.95);
 }
-
-
 
 @media (max-width: 900px) {
     .container {
@@ -290,10 +268,8 @@ form {
         max-width: 100%;
         text-align: center;
     }
-
 }
 
-/* Password Input Wrapper */
 .password-input-wrapper {
     position: relative;
     display: flex;
@@ -334,11 +310,17 @@ form {
     text-align: center;
     margin-top: 20px;
     font-size: 14px;
+    color: #ccc;
 }
 
 .signup-link button {
     color: #bb00e0;
     font-weight: 600;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 0.3s ease;
 }
 
 .signup-link button:hover {
@@ -349,7 +331,7 @@ form {
 .hero.modal {
     min-height: auto;
     padding: 0;
-    overflow: visible;
+    overflow: hidden;
     background: transparent;
 }
 
@@ -358,7 +340,7 @@ form {
 }
 
 .hero.modal .container {
-    gap: 15px;
+    gap: 10px;
     flex-direction: column;
     max-width: 100%;
     margin: 0;
@@ -373,27 +355,65 @@ form {
 
 .hero.modal .card {
     width: 100%;
-    max-width: 500px;
-    padding: 50px 32px 32px 32px;
+    max-width: 520px;
+    padding: 40px 36px 28px 36px;
     margin: 0 auto;
-    max-height: 70vh;
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: hidden;
     position: relative;
+    border-radius: 20px;
 }
 
 .hero.modal h1 {
-    font-size: 24px;
-    margin-top: 16px;
+    font-size: 26px;
+    margin-top: 0;
+    margin-bottom: 8px;
 }
 
 .hero.modal p {
-    font-size: 12px;
+    font-size: 13px;
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+.hero.modal .social-box {
+    margin-bottom: 18px;
+}
+
+.hero.modal form {
+    gap: 12px;
+}
+
+.hero.modal .field label {
+    font-size: 13px;
+}
+
+.hero.modal .field input {
+    padding: 12px 14px;
+}
+
+.hero.modal .bottom {
+    margin-top: 16px;
+    gap: 8px;
+}
+
+.hero.modal .bottom p {
+    font-size: 11px;
+    margin-bottom: 0;
+}
+
+.hero.modal .bottom button {
+    padding: 12px 32px;
+    font-size: 14px;
+}
+
+.hero.modal .signup-link {
+    margin-top: 18px;
+    font-size: 13px;
 }
 
 @media (max-width: 900px) {
     .hero.modal .container {
-        gap: 15px;
+        gap: 10px;
     }
 
     .hero.modal .content {
@@ -403,6 +423,10 @@ form {
 
 @media (max-width: 768px) {
     .hero.modal .container {
-        gap: 15px;
+        gap: 10px;
+    }
+    
+    .hero.modal .card {
+        padding: 32px 24px 24px 24px;
     }
 }

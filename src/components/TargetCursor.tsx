@@ -190,8 +190,8 @@ const TargetCursor: React.FC<TargetCursorProps> = ({
     if (enableCaretAnimation) {
       const inputs = document.querySelectorAll("input, textarea");
       inputs.forEach((input) => {
-        input.addEventListener("focus", handleInputFocus);
-        input.addEventListener("blur", handleInputBlur);
+        input.addEventListener("focus", handleInputFocus as EventListener);
+        input.addEventListener("blur", handleInputBlur as EventListener);
       });
     }
 
@@ -199,10 +199,10 @@ const TargetCursor: React.FC<TargetCursorProps> = ({
       if (!enableCaretAnimation) return;
       const inputs = document.querySelectorAll("input, textarea");
       inputs.forEach((input) => {
-        input.removeEventListener("focus", handleInputFocus);
-        input.removeEventListener("blur", handleInputBlur);
-        input.addEventListener("focus", handleInputFocus);
-        input.addEventListener("blur", handleInputBlur);
+        input.removeEventListener("focus", handleInputFocus as EventListener);
+        input.removeEventListener("blur", handleInputBlur as EventListener);
+        input.addEventListener("focus", handleInputFocus as EventListener);
+        input.addEventListener("blur", handleInputBlur as EventListener);
       });
     });
 
@@ -355,8 +355,8 @@ const TargetCursor: React.FC<TargetCursorProps> = ({
       if (enableCaretAnimation) {
         const inputs = document.querySelectorAll("input, textarea");
         inputs.forEach((input) => {
-          input.removeEventListener("focus", handleInputFocus);
-          input.removeEventListener("blur", handleInputBlur);
+          input.removeEventListener("focus", handleInputFocus as EventListener);
+          input.removeEventListener("blur", handleInputBlur as EventListener);
         });
         elementsObserver.disconnect();
       }

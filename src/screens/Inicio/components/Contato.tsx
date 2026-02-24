@@ -21,7 +21,7 @@ export default function Contato() {
                                 <input
                                     type="text"
                                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                                    placeholder="John"
+                                    placeholder="Júlia"
                                 />
                             </div>
                             <div>
@@ -31,7 +31,7 @@ export default function Contato() {
                                 <input
                                     type="text"
                                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                                    placeholder="Doe"
+                                    placeholder="Costa"
                                 />
                             </div>
                         </div>
@@ -42,7 +42,7 @@ export default function Contato() {
                             <input
                                 type="email"
                                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                                placeholder="john@example.com"
+                                placeholder="julia@example.com"
                             />
                         </div>
                         <div className="mb-6">
@@ -52,7 +52,7 @@ export default function Contato() {
                             <textarea
                                 rows={4}
                                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                                placeholder="Tell us about your project..."
+                                placeholder="Gostaria de elogiar o..."
                             />
                         </div>
                         <button

@@ -1,4 +1,4 @@
-import LogoLoop from './LogoLoop';
+import LogoLoop from '@/components/LogoLoop';
 import { SiReact, SiNextdotjs, SiTypescript, SiTailwindcss } from 'react-icons/si';
 
 const techLogos = [
