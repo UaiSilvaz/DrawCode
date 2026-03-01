@@ -1,0 +1,117 @@
+
+> tela-login-draw@0.1.0 dev
+> next dev --hostname 0.0.0.0 --port 3000
+
+▲ Next.js 16.1.1 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://0.0.0.0:3000
+- Environments: .env.local, .env
+
+✓ Starting...
+Creating turbopack project {
+  dir: 'C:\\Users\\Guilherme\\Documents\\DrawCode\\DrawCode',
+  testMode: true
+}
+✓ Ready in 1560ms
+ GET / 200 in 1569ms (compile: 1160ms, render: 409ms)
+ GET / 200 in 89ms (compile: 5ms, render: 83ms)
+ GET /api/auth/session 200 in 1182ms (compile: 1138ms, render: 44ms)
+ GET /api/auth/session 200 in 37ms (compile: 17ms, render: 21ms)
+ GET /api/auth/session 200 in 56ms (compile: 18ms, render: 39ms)
+ GET /api/auth/session 200 in 17ms (compile: 3ms, render: 14ms)
+ GET /api/auth/session 200 in 75ms (compile: 33ms, render: 41ms)
+ GET /api/auth/session 200 in 42ms (compile: 13ms, render: 30ms)
+prisma:query SELECT "public"."users"."id", "public"."users"."name", "public"."users"."email", "public"."users"."emailVerified", "public"."users"."image", "public"."users"."password", "public"."users"."role"::text, "public"."users"."createdAt", "public"."users"."updatedAt" FROM "public"."users" WHERE ("public"."users"."email" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query INSERT INTO "public"."users" ("id","name","email","password","role","createdAt","updatedAt") VALUES ($1,$2,$3,$4,CAST($5::text AS "public"."Role"),$6,$7) RETURNING "public"."users"."id", "public"."users"."name", "public"."users"."email", "public"."users"."emailVerified", "public"."users"."image", "public"."users"."password", "public"."users"."role"::text, "public"."users"."createdAt", "public"."users"."updatedAt"
+ POST /api/auth/register 201 in 540ms (compile: 66ms, render: 474ms)
+ GET /api/auth/providers 200 in 21ms (compile: 15ms, render: 7ms)
+ GET /api/auth/csrf 200 in 15ms (compile: 4ms, render: 11ms)
+prisma:query SELECT "public"."users"."id", "public"."users"."name", "public"."users"."email", "public"."users"."emailVerified", "public"."users"."image", "public"."users"."password", "public"."users"."role"::text, "public"."users"."createdAt", "public"."users"."updatedAt" FROM "public"."users" WHERE ("public"."users"."email" = $1 AND 1=1) LIMIT $2 OFFSET $3
+ POST /api/auth/callback/credentials? 200 in 326ms (compile: 8ms, render: 318ms)
+ GET /api/auth/session 200 in 13ms (compile: 4ms, render: 10ms)
+ GET /dashboard 200 in 603ms (compile: 229ms, proxy.ts: 219ms, render: 155ms)
+prisma:query SELECT "public"."grape_projects"."id", "public"."grape_projects"."name", "public"."grape_projects"."createdAt", "public"."grape_projects"."updatedAt" FROM "public"."grape_projects" WHERE "public"."grape_projects"."userId" = $1 ORDER BY "public"."grape_projects"."updatedAt" DESC OFFSET $2
+ GET /api/grape/save 200 in 115ms (compile: 78ms, render: 37ms)
+prisma:query SELECT "public"."grape_projects"."id", "public"."grape_projects"."name", "public"."grape_projects"."createdAt", "public"."grape_projects"."updatedAt" FROM "public"."grape_projects" WHERE "public"."grape_projects"."userId" = $1 ORDER BY "public"."grape_projects"."updatedAt" DESC OFFSET $2
+ GET /api/grape/save 200 in 32ms (compile: 3ms, render: 29ms)
+ GET /grape 200 in 366ms (compile: 293ms, proxy.ts: 20ms, render: 53ms)
+ GET /*%20%7B%20box-sizing:%20border-box;%20%7D%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20html%20%7B%20background:%20 404 in 178ms (compile: 103ms, render: 75ms)
+ GET /api/auth/session 200 in 30ms (compile: 12ms, render: 18ms)
+ GET /api/auth/session 200 in 15ms (compile: 4ms, render: 11ms)
+✓ Compiled in 149ms
+✓ Compiled in 57ms
+ GET /api/auth/session 200 in 290ms (compile: 16ms, render: 274ms)
+ GET /grape 200 in 732ms (compile: 180ms, proxy.ts: 28ms, render: 524ms)
+ GET /api/auth/session 200 in 22ms (compile: 9ms, render: 14ms)
+ GET /*%20%7B%20box-sizing:%20border-box;%20%7D%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20html%20%7B%20background:%20 404 in 53ms (compile: 7ms, render: 46ms)
+ GET /api/auth/session 200 in 11ms (compile: 3ms, render: 8ms)
+✓ Compiled in 242ms
+ GET /*%20%7B%20box-sizing:%20border-box;%20%7D%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20html%20%7B%20background:%20 404 in 54ms (compile: 7ms, render: 47ms)
+✓ Compiled in 114ms
+ GET /*%20%7B%20box-sizing:%20border-box;%20%7D%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20html%20%7B%20background:%20 404 in 48ms (compile: 7ms, render: 41ms)
+✓ Compiled in 74ms
+ GET /*%20%7B%20box-sizing:%20border-box;%20%7D%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20html%20%7B%20background:%20 404 in 47ms (compile: 6ms, render: 41ms)
+✓ Compiled in 71ms
+ GET /*%20%7B%20box-sizing:%20border-box;%20%7D%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20html%20%7B%20background:%20 404 in 46ms (compile: 6ms, render: 40ms)
+✓ Compiled in 80ms
+ GET /*%20%7B%20box-sizing:%20border-box;%20%7D%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20html%20%7B%20background:%20 404 in 40ms (compile: 5ms, render: 36ms)
+ GET /api/auth/session 200 in 42ms (compile: 22ms, render: 20ms)
+ GET /api/auth/session 200 in 16ms (compile: 3ms, render: 14ms)
+ GET /api/auth/session 200 in 200ms (compile: 77ms, render: 123ms)
+ GET /api/auth/session 200 in 31ms (compile: 10ms, render: 21ms)
+✓ Compiled in 67ms
+✓ Compiled in 201ms
+ GET /grape 200 in 547ms (compile: 176ms, proxy.ts: 24ms, render: 348ms)
+ GET /api/auth/session 200 in 80ms (compile: 14ms, render: 66ms)
+ GET /*%20%7B%20box-sizing:%20border-box;%20%7D%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20html%20%7B%20background:%20 404 in 58ms (compile: 7ms, render: 51ms)
+ GET /api/auth/session 200 in 17ms (compile: 3ms, render: 15ms)
+ GET /api/auth/session 200 in 38ms (compile: 15ms, render: 24ms)
+ GET /api/auth/session 200 in 22ms (compile: 5ms, render: 17ms)
+ GET /grape 200 in 151ms (compile: 7ms, proxy.ts: 25ms, render: 118ms)
+ GET /*%20%7B%20box-sizing:%20border-box;%20%7D%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20html%20%7B%20background:%20 404 in 186ms (compile: 47ms, render: 139ms)
+ GET /api/auth/session 200 in 194ms (compile: 29ms, render: 165ms)
+ GET /api/auth/session 200 in 20ms (compile: 5ms, render: 15ms)
+ GET /api/auth/session 200 in 46ms (compile: 21ms, render: 25ms)
+ GET /api/auth/session 200 in 25ms (compile: 9ms, render: 16ms)
+ GET /api/auth/session 200 in 104ms (compile: 28ms, render: 76ms)
+ GET /api/auth/session 200 in 35ms (compile: 10ms, render: 25ms)
+ GET /grape 200 in 311ms (compile: 39ms, proxy.ts: 107ms, render: 165ms)
+ GET /api/auth/session 200 in 66ms (compile: 27ms, render: 40ms)
+ GET /*%20%7B%20box-sizing:%20border-box;%20%7D%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20html%20%7B%20background:%20 404 in 99ms (compile: 23ms, render: 76ms)
+ GET /api/auth/session 200 in 17ms (compile: 4ms, render: 13ms)
+ GET /api/auth/session 200 in 1236ms (compile: 963ms, render: 273ms)
+ GET /api/auth/session 200 in 19ms (compile: 6ms, render: 13ms)
+ GET /api/auth/session 200 in 167ms (compile: 86ms, render: 80ms)
+ GET /api/auth/session 200 in 82ms (compile: 13ms, render: 70ms)
+✓ Compiled in 358ms
+✓ Compiled in 82ms
+ GET /*%20%7B%20box-sizing:%20border-box;%20%7D%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20html%20%7B%20background:%20 404 in 304ms (compile: 24ms, render: 280ms)
+ GET /api/auth/session 200 in 348ms (compile: 65ms, render: 283ms)
+ GET /grape 200 in 1377ms (compile: 387ms, proxy.ts: 155ms, render: 835ms)
+ GET /api/auth/session 200 in 76ms (compile: 6ms, render: 69ms)
+ GET /*%20%7B%20box-sizing:%20border-box;%20%7D%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20html%20%7B%20background:%20 404 in 71ms (compile: 8ms, render: 63ms)
+ GET /api/auth/session 200 in 13ms (compile: 3ms, render: 10ms)
+✓ Compiled in 62ms
+✓ Compiled in 254ms
+ GET /*%20%7B%20box-sizing:%20border-box;%20%7D%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20html%20%7B%20background:%20 404 in 93ms (compile: 9ms, render: 84ms)
+ GET /api/auth/session 200 in 34ms (compile: 22ms, render: 12ms)
+ GET /grape 200 in 536ms (compile: 163ms, proxy.ts: 15ms, render: 358ms)
+ GET /*%20%7B%20box-sizing:%20border-box;%20%7D%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20html%20%7B%20background:%20 404 in 54ms (compile: 6ms, render: 49ms)
+ GET /api/auth/session 200 in 71ms (compile: 3ms, render: 68ms)
+ GET /api/auth/session 200 in 11ms (compile: 3ms, render: 8ms)
+✓ Compiled in 130ms
+✓ Compiled in 66ms
+ GET /api/auth/session 200 in 242ms (compile: 12ms, render: 231ms)
+ GET /grape 200 in 634ms (compile: 152ms, proxy.ts: 34ms, render: 449ms)
+ GET /api/auth/session 200 in 91ms (compile: 15ms, render: 76ms)
+ GET /*%20%7B%20box-sizing:%20border-box;%20%7D%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20html%20%7B%20background:%20 404 in 67ms (compile: 6ms, render: 61ms)
+ GET /api/auth/session 200 in 13ms (compile: 3ms, render: 10ms)
+✓ Compiled in 50ms
+✓ Compiled in 53ms
+ GET /api/auth/session 200 in 210ms (compile: 14ms, render: 197ms)
+ GET /grape 200 in 615ms (compile: 170ms, proxy.ts: 25ms, render: 419ms)
+ GET /api/auth/session 200 in 16ms (compile: 3ms, render: 13ms)
+ GET /*%20%7B%20box-sizing:%20border-box;%20%7D%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20html%20%7B%20background:%20 404 in 53ms (compile: 5ms, render: 48ms)
+ GET /api/auth/session 200 in 18ms (compile: 9ms, render: 9ms)
+✓ Compiled in 202ms
+[?25h
