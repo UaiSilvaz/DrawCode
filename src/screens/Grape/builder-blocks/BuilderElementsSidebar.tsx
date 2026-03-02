@@ -1,15 +1,16 @@
 import type { DragEvent } from 'react';
-import { Boxes, Image as ImageIcon, LayoutTemplate, Shapes, Type } from 'lucide-react';
+import { Boxes, Image as ImageIcon, LayoutTemplate, Settings, Shapes, Type } from 'lucide-react';
 import type { SidebarBlockItem, SidebarGroupWithBlocks, SidebarIcon } from './types';
 
 interface BuilderElementsSidebarProps {
     leftSidebarCollapsed: boolean;
-    groupPanelOpen: boolean;
     groupedSidebar: SidebarGroupWithBlocks[];
     activeGroup?: SidebarGroupWithBlocks;
+    canvasElementsCount: number;
     onCollapse: () => void;
     onSelectGroup: (groupId: string) => void;
-    onTogglePanel: () => void;
+    propertiesActive: boolean;
+    onToggleProperties: () => void;
     onInsertBlock: (item: SidebarBlockItem) => void;
     onBlockDragStart: (item: SidebarBlockItem, event: DragEvent<HTMLButtonElement>) => void;
 }
@@ -24,12 +25,13 @@ const renderGroupIcon = (icon: SidebarIcon) => {
 
 export default function BuilderElementsSidebar({
     leftSidebarCollapsed,
-    groupPanelOpen,
     groupedSidebar,
     activeGroup,
+    canvasElementsCount,
     onCollapse,
     onSelectGroup,
-    onTogglePanel,
+    propertiesActive,
+    onToggleProperties,
     onInsertBlock,
     onBlockDragStart,
 }: BuilderElementsSidebarProps) {
@@ -46,20 +48,22 @@ export default function BuilderElementsSidebar({
                         key={group.id}
                         className={`draw-group-icon ${activeGroup?.id === group.id ? 'is-active' : ''}`}
                         onClick={() => onSelectGroup(group.id)}
-                        title={group.label}
                     >
                         {renderGroupIcon(group.icon)}
                     </button>
                 ))}
+                <button
+                    className={`draw-group-icon ${propertiesActive ? 'is-active' : ''}`}
+                    onClick={onToggleProperties}
+                >
+                    <Settings size={18} />
+                </button>
             </div>
-            <div className={`draw-sidebar-panel ${groupPanelOpen ? '' : 'is-hidden'} ${leftSidebarCollapsed ? 'is-hidden' : ''}`}>
+            <div className={`draw-sidebar-panel ${leftSidebarCollapsed ? 'is-hidden' : ''}`}>
                 <div className="draw-panel-head">
-                    <div className="draw-panel-title">{activeGroup?.label ?? 'Elementos'}</div>
-                    <button className="draw-side-toggle" onClick={onTogglePanel}>
-                        {groupPanelOpen ? '<' : '>'}
-                    </button>
+                    <div className="draw-panel-title">{propertiesActive ? 'Propriedades' : activeGroup?.label ?? 'Elementos'}</div>
                 </div>
-                <div className="draw-group-list">
+                <div className={`draw-group-list ${propertiesActive ? 'is-hidden' : ''}`}>
                     {(activeGroup?.blocks ?? []).map((item) => (
                         <button
                             key={item.id}
@@ -67,11 +71,28 @@ export default function BuilderElementsSidebar({
                             onClick={() => onInsertBlock(item)}
                             onDragStart={(event) => onBlockDragStart(item, event)}
                             draggable
-                            title={item.label}
                         >
                             <span dangerouslySetInnerHTML={{ __html: item.previewHtml }} />
                         </button>
                     ))}
+                </div>
+                <div className={`draw-props-list ${propertiesActive ? '' : 'is-hidden'}`}>
+                    <section className="draw-side-section">
+                        <h3>Propriedades</h3>
+                        <div id="styles" />
+                    </section>
+                    <section className="draw-side-section">
+                        <h3>Traits</h3>
+                        <div id="traits" />
+                    </section>
+                    <section className="draw-side-section">
+                        <h3>Camadas</h3>
+                        <div id="layers" />
+                    </section>
+                    <section className="draw-side-section draw-json-preview">
+                        <h3>JSON da IA</h3>
+                        <p>{canvasElementsCount} elementos no canvas</p>
+                    </section>
                 </div>
             </div>
         </aside>

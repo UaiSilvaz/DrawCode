@@ -14,11 +14,11 @@
     position: fixed;
     inset: 0;
     display: grid;
-    grid-template-columns: 360px minmax(600px, 1fr) 350px;
+    grid-template-columns: 360px minmax(600px, 1fr);
     grid-template-rows: 70px 1fr;
     grid-template-areas:
-        "toolbar toolbar toolbar"
-        "sidebar canvas right";
+        "toolbar toolbar"
+        "sidebar canvas";
     background:
         radial-gradient(80% 110% at 0% 0%, rgba(88, 28, 135, 0.24), transparent 65%),
         radial-gradient(70% 120% at 100% 0%, rgba(49, 46, 129, 0.2), transparent 72%),
@@ -28,15 +28,7 @@
 }
 
 .draw-layout.left-collapsed {
-    grid-template-columns: 82px minmax(600px, 1fr) 350px;
-}
-
-.draw-layout.right-collapsed {
-    grid-template-columns: 360px minmax(600px, 1fr) 74px;
-}
-
-.draw-layout.left-collapsed.right-collapsed {
-    grid-template-columns: 82px minmax(600px, 1fr) 74px;
+    grid-template-columns: 82px minmax(600px, 1fr);
 }
 
 .draw-hidden-input {
@@ -222,6 +214,17 @@
 
 .draw-icon-collapse {
     margin-bottom: 4px;
+    width: 42px;
+    height: 42px;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    flex: 0 0 42px;
+    position: relative;
+    z-index: 3;
+    pointer-events: auto;
 }
 
 .draw-sidebar-panel {
@@ -236,6 +239,16 @@
 .draw-group-list {
     display: grid;
     gap: 10px;
+}
+
+.draw-props-list {
+    display: grid;
+    gap: 10px;
+}
+
+.draw-group-list.is-hidden,
+.draw-props-list.is-hidden {
+    display: none;
 }
 
 .draw-group-item {
@@ -416,10 +429,31 @@
     border-left: 1px solid var(--draw-border);
     background: linear-gradient(180deg, #18122f, #0f0d1f);
     overflow: auto;
+    position: relative;
 }
 
 .draw-right.is-collapsed {
     padding: 10px 8px;
+}
+
+.draw-right-handle {
+    position: absolute;
+    left: -16px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 54px;
+    border-radius: 14px;
+    border: 1px solid rgba(167, 139, 250, 0.38);
+    background: linear-gradient(180deg, rgba(31, 26, 48, 0.96), rgba(17, 14, 32, 0.96));
+    color: #f8fafc;
+    cursor: pointer;
+    z-index: 30;
+    box-shadow: 0 8px 24px rgba(2, 6, 23, 0.5);
+}
+
+.draw-right-handle:hover {
+    border-color: rgba(167, 139, 250, 0.82);
 }
 
 .draw-right.is-collapsed .draw-side-section {
@@ -427,6 +461,10 @@
 }
 
 .draw-right.is-collapsed .draw-panel-title {
+    display: none;
+}
+
+.draw-right.is-collapsed .draw-panel-head {
     display: none;
 }
 
@@ -832,6 +870,17 @@
 
 .gjs-frame {
     border-radius: 0 !important;
+}
+
+.gjs-badge {
+    display: none !important;
+}
+
+.gjs-com-badge,
+.gjs-badge__name,
+.gjs-badge__icon,
+.gjs-off-prv {
+    display: none !important;
 }
 
 @media (max-width: 1240px) {

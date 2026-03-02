@@ -31,8 +31,8 @@ export default function BuilderContextMenu({
             style={{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }}
             onContextMenu={(event) => event.preventDefault()}
         >
-            <button className="draw-context-item" onClick={() => { onUndo(); onClose(); }}>Undo</button>
-            <button className="draw-context-item" onClick={() => { onRedo(); onClose(); }}>Redo</button>
+            <button className="draw-context-item" onClick={() => { onUndo(); onClose(); }}>Desfazer</button>
+            <button className="draw-context-item" onClick={() => { onRedo(); onClose(); }}>Refazer</button>
             <div className="draw-context-separator" />
             <button className="draw-context-item" onClick={() => { onDuplicate(); onClose(); }}>Duplicar</button>
             <button className="draw-context-item" onClick={() => { onGroup(); onClose(); }}>Agrupar</button>

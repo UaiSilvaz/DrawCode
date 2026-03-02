@@ -1,23 +1,25 @@
 interface BuilderPropertiesPanelProps {
     rightSidebarCollapsed: boolean;
     canvasElementsCount: number;
-    onCollapse: () => void;
+    onToggle: () => void;
 }
 
 export default function BuilderPropertiesPanel({
     rightSidebarCollapsed,
     canvasElementsCount,
-    onCollapse,
+    onToggle,
 }: BuilderPropertiesPanelProps) {
     return (
         <aside className={`draw-right ${rightSidebarCollapsed ? 'is-collapsed' : ''}`}>
+            <button
+                className="draw-right-handle"
+                onClick={onToggle}
+                aria-label={rightSidebarCollapsed ? 'Abrir propriedades' : 'Recolher propriedades'}
+            >
+                {rightSidebarCollapsed ? '>' : '<'}
+            </button>
             <div className="draw-panel-head">
                 <div className="draw-panel-title">Propriedades</div>
-                {!rightSidebarCollapsed && (
-                    <button className="draw-side-toggle" onClick={onCollapse}>
-                        {'>'}
-                    </button>
-                )}
             </div>
             <section className="draw-side-section">
                 <h3>Propriedades</h3>

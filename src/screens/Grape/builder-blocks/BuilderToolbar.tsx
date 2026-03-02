@@ -7,8 +7,6 @@ interface BuilderToolbarProps {
     canSave: boolean;
     canUseEditorActions: boolean;
     snapEnabled: boolean;
-    leftSidebarCollapsed: boolean;
-    rightSidebarCollapsed: boolean;
     saveMsg: string;
     hasUser: boolean;
     onProjectNameChange: (event: ChangeEvent<HTMLInputElement>) => void;
@@ -17,8 +15,6 @@ interface BuilderToolbarProps {
     onImportJson: () => void;
     onUploadImage: () => void;
     onToggleSnap: () => void;
-    onToggleLeftSidebar: () => void;
-    onToggleRightSidebar: () => void;
 }
 
 export default function BuilderToolbar({
@@ -27,8 +23,6 @@ export default function BuilderToolbar({
     canSave,
     canUseEditorActions,
     snapEnabled,
-    leftSidebarCollapsed,
-    rightSidebarCollapsed,
     saveMsg,
     hasUser,
     onProjectNameChange,
@@ -37,8 +31,6 @@ export default function BuilderToolbar({
     onImportJson,
     onUploadImage,
     onToggleSnap,
-    onToggleLeftSidebar,
-    onToggleRightSidebar,
 }: BuilderToolbarProps) {
     return (
         <header className="draw-toolbar">
@@ -70,12 +62,6 @@ export default function BuilderToolbar({
                     disabled={!canUseEditorActions}
                 >
                     Snap {snapEnabled ? 'ON' : 'OFF'}
-                </button>
-                <button className="draw-btn" onClick={onToggleLeftSidebar}>
-                    {leftSidebarCollapsed ? 'Abrir Componentes' : 'Fechar Componentes'}
-                </button>
-                <button className="draw-btn" onClick={onToggleRightSidebar}>
-                    {rightSidebarCollapsed ? 'Abrir Propriedades' : 'Fechar Propriedades'}
                 </button>
             </div>
             <div className="draw-toolbar-right">

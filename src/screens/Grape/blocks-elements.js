@@ -67,7 +67,7 @@ export default function registerBlocks(editor) {
         tagName: "div",
         attributes: { "data-dc-type": "shape-rectangle" },
         style: withAbsoluteStyle({
-            "background-image": "linear-gradient(135deg,#7c3aed,#4c1d95)",
+            "background-color": "#6d28d9",
             "border-radius": "14px",
             border: "1px solid #a78bfa",
         }),
