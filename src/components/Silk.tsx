@@ -145,7 +145,12 @@ const Silk: React.FC<SilkProps> = ({ speed = 5, scale = 1, color = '#35096f37', 
     );
 
     return (
-        <Canvas dpr={[1, 2]} frameloop="always">
+        <Canvas
+            dpr={[1, 1.5]}
+            frameloop="always"
+            style={{ width: '100%', height: '100%' }}
+            gl={{ antialias: false, alpha: true, powerPreference: 'high-performance' }}
+        >
             <SilkPlane ref={meshRef} uniforms={uniforms} />
         </Canvas>
     );

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useCallback, useContext, useState, ReactNode } from "react";
 
 type ModalMode = "login" | "signup";
 
@@ -18,19 +18,19 @@ export function ModalProvider({ children }: { children: ReactNode }) {
     const [isOpen, setIsOpen] = useState(false);
     const [mode, setMode] = useState<ModalMode>("login");
 
-    const openLogin = () => {
+    const openLogin = useCallback(() => {
         setMode("login");
         setIsOpen(true);
-    };
+    }, []);
 
-    const openSignup = () => {
+    const openSignup = useCallback(() => {
         setMode("signup");
         setIsOpen(true);
-    };
+    }, []);
 
-    const close = () => {
+    const close = useCallback(() => {
         setIsOpen(false);
-    };
+    }, []);
 
     return (
         <ModalContext.Provider value={{ isOpen, mode, openLogin, openSignup, close }}>

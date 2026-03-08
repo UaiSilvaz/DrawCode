@@ -2,32 +2,25 @@
 
 import { useModal } from "@/context/ModalContext";
 import ModalLogin from "@/components/ui/ModalLogin";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, Suspense } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 function GlobalModalsContent() {
     const { isOpen, mode, close, openLogin, openSignup } = useModal();
     const pathname = usePathname();
     const searchParams = useSearchParams();
-    const [mounted, setMounted] = useState(false);
 
     // Get callbackUrl from query params
     const callbackUrl = searchParams?.get('callbackUrl') || '/dashboard';
 
     useEffect(() => {
-        setMounted(true);
-    }, []);
-
-    useEffect(() => {
-        if (!mounted) return;
-
         // Check if we should open modal based on URL
         if (pathname === '/login') {
             openLogin();
         } else if (pathname === '/register') {
             openSignup();
         }
-    }, [pathname, mounted, openLogin, openSignup]);
+    }, [pathname, openLogin, openSignup]);
 
     // Don't Render modal on grape, dashboard, or other protected routes
     if (pathname === '/grape' || pathname === '/dashboard' || pathname?.startsWith('/dashboard')) {

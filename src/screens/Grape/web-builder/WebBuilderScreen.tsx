@@ -1,424 +1,770 @@
 'use client';
 
-import { ChangeEvent, DragEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import grapesjs from 'grapesjs';
+import { useCallback, useEffect, useRef } from 'react';
 import 'grapesjs/dist/css/grapes.min.css';
 import '../ui.css';
-import blocksElements from '../blocks-elements';
 import { type DockItemData } from '@/components/Dock';
 import { VscAccount, VscArchive, VscHome, VscSettingsGear } from 'react-icons/vsc';
 import BuilderToolbar from '../builder-blocks/BuilderToolbar';
 import BuilderElementsSidebar from '../builder-blocks/BuilderElementsSidebar';
 import BuilderCanvasArea from '../builder-blocks/BuilderCanvasArea';
 import BuilderContextMenu from '../builder-blocks/BuilderContextMenu';
-import type { ContextMenuState, SidebarBlockItem, SidebarGroup } from '../builder-blocks/types';
+import type { AIGenerationResult, DrawToolId } from '../builder-blocks/types';
+import {
+    PAGE_HEIGHT,
+    PAGE_WIDTH,
+    applySnapForComponent,
+    selectComponent,
+    type AnyComponent,
+    type CanvasPage,
+    type WrapperBoundsSnapshot,
+    type WrapperElementSnapshot,
+    type WebBuilderProps,
+} from './builder-core';
 
-import { type AnyComponent, type CanvasCoordsApi, type CanvasElementNode, type CanvasPage, type EditorInstance, type WebBuilderProps, GRID_STEP, PAGE_HEIGHT, PAGE_WIDTH, CATEGORY_TO_GROUP, parseNumericValue, inferTypeFromComponent, serializeCanvas, applySnapForComponent, nodeToComponent, extractImportedNodes, isInputElement, unwrapAddedComponent, selectComponent, slugify, stripHtml } from './builder-core';
+import {
+    useEditorState,
+    useCanvasSync,
+    useCanvasHandlers,
+    useComponentHandlers,
+    useFileHandlers,
+    useDragDropHandlers,
+    useSyncPageRefs,
+    useSaveHandler,
+    useEditorEventListeners,
+    useKeyboardShortcuts,
+    useContextMenuHandler,
+} from './hooks';
+
+import {
+    initializeGrapesJS,
+    useCanvasBackdrop,
+    useSidebarGroups,
+} from './initialization';
+
+type CanvasPoint = {
+    x: number;
+    y: number;
+};
+
+type DrawStrokeSession = {
+    start: CanvasPoint;
+    points: CanvasPoint[];
+    previewElement: SVGSVGElement | null;
+};
+
+const DRAW_STROKE_WIDTH = 4;
+const DRAW_PREVIEW_STROKE = '#f472b6';
+const DRAW_PREVIEW_FILL = 'rgba(244, 114, 182, 0.18)';
+const MIN_DRAW_SIZE = 24;
+const DEFAULT_SHAPE_SIZE = 140;
 
 
 export default function WebBuilder({ userId, projectId: initialProjectId, projectName: initialProjectName }: WebBuilderProps) {
-    const initialPages: CanvasPage[] = useMemo(() => ([
-        {
-            id: 'page-1',
-            name: 'Pagina 1',
+    // State management
+    const editorState = useEditorState(initialProjectId, initialProjectName);
+    const {
+        editor,
+        saving,
+        saveMsg,
+        aiOutput,
+        aiGenerating,
+        aiPreview,
+        currentProjectId,
+        projectName,
+        snapEnabled,
+        canvasStructure,
+        leftSidebarCollapsed,
+        contextMenu,
+        zoomLevel,
+        activeGroupId,
+        leftPanelMode,
+        activeDrawTool,
+        sidebarBlocks,
+        pages,
+        activePageIndex,
+        isPanning,
+        setEditor,
+        setSaving,
+        setSaveMsg,
+        setAiOutput,
+        setAiGenerating,
+        setAiPreview,
+        setCurrentProjectId,
+        setProjectName,
+        setSnapEnabled,
+        setCanvasStructure,
+        setLeftSidebarCollapsed,
+        setContextMenu,
+        setZoomLevel,
+        setActiveGroupId,
+        setLeftPanelMode,
+        setActiveDrawTool,
+        setSidebarBlocks,
+        setPages,
+        setActivePageIndex,
+        setIsPanning,
+        fileInputRef,
+        imageInputRef,
+        canvasShellRef,
+        snapRef,
+        pagesRef,
+        activePageIndexRef,
+        zoomRef,
+        panStartRef,
+        spacePressedRef,
+        draggedBlockIdRef,
+        draggedBlockRef,
+    } = editorState;
+
+    // Canvas sync
+    const { syncCanvasSchema, snapshotCurrentPage, applyPageToCanvas } = useCanvasSync(
+        editor,
+        pagesRef,
+        activePageIndexRef,
+        setCanvasStructure,
+    );
+
+    // Canvas backdrop
+    const { applyCanvasBackdrop } = useCanvasBackdrop();
+
+    // Sidebar groups
+    const { groupedSidebar, activeGroup } = useSidebarGroups(sidebarBlocks, activeGroupId);
+    const drawStrokeRef = useRef<DrawStrokeSession | null>(null);
+    const drawModeActive = leftPanelMode === 'draw';
+
+    const clonePayload = useCallback((payload: unknown) => {
+        if (payload == null) return payload;
+        if (typeof payload === 'string') return payload;
+        if (typeof structuredClone === 'function') return structuredClone(payload);
+        return JSON.parse(JSON.stringify(payload)) as unknown;
+    }, []);
+
+    const buildPathData = useCallback((points: CanvasPoint[], offsetX = 0, offsetY = 0) => (
+        points
+            .map((point, index) => {
+                const x = (point.x - offsetX).toFixed(1);
+                const y = (point.y - offsetY).toFixed(1);
+                return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+            })
+            .join(' ')
+    ), []);
+
+    const createPreviewElement = useCallback((canvasDoc: Document) => {
+        const preview = canvasDoc.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        preview.setAttribute('width', String(PAGE_WIDTH));
+        preview.setAttribute('height', String(PAGE_HEIGHT));
+        preview.setAttribute('viewBox', `0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}`);
+        preview.setAttribute('fill', 'none');
+        preview.style.position = 'absolute';
+        preview.style.left = '0';
+        preview.style.top = '0';
+        preview.style.width = `${PAGE_WIDTH}px`;
+        preview.style.height = `${PAGE_HEIGHT}px`;
+        preview.style.pointerEvents = 'none';
+        preview.style.overflow = 'visible';
+        preview.style.zIndex = '9999';
+        canvasDoc.body.appendChild(preview);
+        return preview;
+    }, []);
+
+    const clearPreviewElement = useCallback((session: DrawStrokeSession | null) => {
+        session?.previewElement?.remove();
+    }, []);
+
+    const makeShapeBounds = useCallback((start: CanvasPoint, end: CanvasPoint) => {
+        const rawWidth = Math.abs(end.x - start.x);
+        const rawHeight = Math.abs(end.y - start.y);
+        const width = rawWidth < 4 ? DEFAULT_SHAPE_SIZE : Math.max(rawWidth, MIN_DRAW_SIZE);
+        const height = rawHeight < 4 ? DEFAULT_SHAPE_SIZE : Math.max(rawHeight, MIN_DRAW_SIZE);
+        const left = rawWidth < 4 ? start.x : Math.min(start.x, end.x);
+        const top = rawHeight < 4 ? start.y : Math.min(start.y, end.y);
+
+        return { left, top, width, height };
+    }, []);
+
+    const makeLineBounds = useCallback((start: CanvasPoint, end: CanvasPoint) => {
+        const deltaX = end.x - start.x;
+        const deltaY = end.y - start.y;
+        if (Math.hypot(deltaX, deltaY) < 4) {
+            return {
+                start,
+                end: { x: start.x + DEFAULT_SHAPE_SIZE, y: start.y },
+            };
+        }
+
+        return { start, end };
+    }, []);
+
+    const renderPreview = useCallback((toolId: DrawToolId, session: DrawStrokeSession) => {
+        const preview = session.previewElement;
+        if (!preview) return;
+
+        preview.replaceChildren();
+        const svgNs = 'http://www.w3.org/2000/svg';
+        const currentPoint = session.points[session.points.length - 1] ?? session.start;
+
+        if (toolId === 'pencil') {
+            const path = preview.ownerDocument.createElementNS(svgNs, 'path');
+            path.setAttribute('d', buildPathData(session.points));
+            path.setAttribute('stroke', DRAW_PREVIEW_STROKE);
+            path.setAttribute('stroke-width', String(DRAW_STROKE_WIDTH));
+            path.setAttribute('stroke-linecap', 'round');
+            path.setAttribute('stroke-linejoin', 'round');
+            preview.appendChild(path);
+            return;
+        }
+
+        if (toolId === 'line') {
+            const normalized = makeLineBounds(session.start, currentPoint);
+            const line = preview.ownerDocument.createElementNS(svgNs, 'line');
+            line.setAttribute('x1', normalized.start.x.toFixed(1));
+            line.setAttribute('y1', normalized.start.y.toFixed(1));
+            line.setAttribute('x2', normalized.end.x.toFixed(1));
+            line.setAttribute('y2', normalized.end.y.toFixed(1));
+            line.setAttribute('stroke', DRAW_PREVIEW_STROKE);
+            line.setAttribute('stroke-width', String(DRAW_STROKE_WIDTH));
+            line.setAttribute('stroke-linecap', 'round');
+            preview.appendChild(line);
+            return;
+        }
+
+        const bounds = makeShapeBounds(session.start, currentPoint);
+
+        if (toolId === 'square') {
+            const rect = preview.ownerDocument.createElementNS(svgNs, 'rect');
+            rect.setAttribute('x', bounds.left.toFixed(1));
+            rect.setAttribute('y', bounds.top.toFixed(1));
+            rect.setAttribute('width', bounds.width.toFixed(1));
+            rect.setAttribute('height', bounds.height.toFixed(1));
+            rect.setAttribute('fill', DRAW_PREVIEW_FILL);
+            rect.setAttribute('stroke', DRAW_PREVIEW_STROKE);
+            rect.setAttribute('stroke-width', '2');
+            preview.appendChild(rect);
+            return;
+        }
+
+        if (toolId === 'circle') {
+            const ellipse = preview.ownerDocument.createElementNS(svgNs, 'ellipse');
+            ellipse.setAttribute('cx', (bounds.left + bounds.width / 2).toFixed(1));
+            ellipse.setAttribute('cy', (bounds.top + bounds.height / 2).toFixed(1));
+            ellipse.setAttribute('rx', (bounds.width / 2).toFixed(1));
+            ellipse.setAttribute('ry', (bounds.height / 2).toFixed(1));
+            ellipse.setAttribute('fill', DRAW_PREVIEW_FILL);
+            ellipse.setAttribute('stroke', DRAW_PREVIEW_STROKE);
+            ellipse.setAttribute('stroke-width', '2');
+            preview.appendChild(ellipse);
+            return;
+        }
+
+        if (toolId === 'triangle') {
+            const polygon = preview.ownerDocument.createElementNS(svgNs, 'polygon');
+            const points = [
+                `${(bounds.left + bounds.width / 2).toFixed(1)},${bounds.top.toFixed(1)}`,
+                `${bounds.left.toFixed(1)},${(bounds.top + bounds.height).toFixed(1)}`,
+                `${(bounds.left + bounds.width).toFixed(1)},${(bounds.top + bounds.height).toFixed(1)}`,
+            ].join(' ');
+            polygon.setAttribute('points', points);
+            polygon.setAttribute('fill', DRAW_PREVIEW_FILL);
+            polygon.setAttribute('stroke', DRAW_PREVIEW_STROKE);
+            polygon.setAttribute('stroke-width', '2');
+            preview.appendChild(polygon);
+        }
+    }, [buildPathData, makeLineBounds, makeShapeBounds]);
+
+    const resolveCanvasPoint = useCallback((event: MouseEvent): CanvasPoint | null => {
+        if (!editor) return null;
+        const canvasApi = (editor as { Canvas?: { getDocument?: () => Document | null } }).Canvas;
+        const canvasDoc = canvasApi?.getDocument?.();
+        const body = canvasDoc?.body;
+        if (!body) return null;
+
+        const rect = body.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return null;
+
+        const xRatio = (event.clientX - rect.left) / rect.width;
+        const yRatio = (event.clientY - rect.top) / rect.height;
+
+        return {
+            x: Math.max(0, Math.min(PAGE_WIDTH, xRatio * PAGE_WIDTH)),
+            y: Math.max(0, Math.min(PAGE_HEIGHT, yRatio * PAGE_HEIGHT)),
+        };
+    }, [editor]);
+
+    const addCanvasComponent = useCallback((payload: unknown, styleOverrides: Record<string, string> = {}) => {
+        if (!editor) return null;
+        const added = editor.addComponents(payload as never);
+        const inserted = (Array.isArray(added) ? added[0] : added) as AnyComponent | null;
+        if (!inserted) return null;
+
+        const currentStyle = (inserted.getStyle?.() ?? {}) as Record<string, string | number | undefined>;
+        const sanitizedStyle = Object.fromEntries(
+            Object.entries(currentStyle).filter(([, value]) => value !== undefined),
+        ) as Record<string, string | number>;
+        inserted.setStyle({
+            ...sanitizedStyle,
+            ...styleOverrides,
+        });
+
+        if (snapRef.current) applySnapForComponent(inserted);
+        selectComponent(editor, inserted);
+        syncCanvasSchema(editor);
+        return inserted;
+    }, [editor, snapRef, syncCanvasSchema]);
+
+    const insertBlockAtPoint = useCallback((
+        blockId: string,
+        point: CanvasPoint,
+        styleOverrides: Record<string, string> = {},
+    ) => {
+        if (!editor) return null;
+        const block = editor.BlockManager.get(blockId);
+        const content = block?.get('content');
+        if (!content) return null;
+
+        return addCanvasComponent(clonePayload(content), {
+            left: `${Math.round(point.x)}px`,
+            top: `${Math.round(point.y)}px`,
+            ...styleOverrides,
+        });
+    }, [addCanvasComponent, clonePayload, editor]);
+
+    const insertShapeAtPoints = useCallback((toolId: DrawToolId, start: CanvasPoint, end: CanvasPoint) => {
+        const bounds = makeShapeBounds(start, end);
+
+        if (toolId === 'square') {
+            return addCanvasComponent({
+                tagName: 'div',
+                attributes: { 'data-dc-type': 'shape-rectangle' },
+                style: {
+                    position: 'absolute',
+                    left: `${Math.round(bounds.left)}px`,
+                    top: `${Math.round(bounds.top)}px`,
+                    width: `${Math.round(bounds.width)}px`,
+                    height: `${Math.round(bounds.height)}px`,
+                    border: '1px solid rgba(139, 92, 246, 0.9)',
+                    'border-radius': '16px',
+                    'background-color': '#8b5cf6',
+                    'box-shadow': '0 0 30px rgba(236, 72, 153, 0.24)',
+                },
+            }, {
+                'background-color': '#8b5cf6',
+                'box-shadow': '0 0 30px rgba(236, 72, 153, 0.24)',
+            });
+        }
+
+        if (toolId === 'circle') {
+            return addCanvasComponent({
+                tagName: 'div',
+                attributes: { 'data-dc-type': 'shape-circle' },
+                style: {
+                    position: 'absolute',
+                    left: `${Math.round(bounds.left)}px`,
+                    top: `${Math.round(bounds.top)}px`,
+                    width: `${Math.round(bounds.width)}px`,
+                    height: `${Math.round(bounds.height)}px`,
+                    border: '1px solid rgba(244, 114, 182, 0.85)',
+                    'border-radius': '999px',
+                    'background-color': '#f472b6',
+                    'box-shadow': '0 0 28px rgba(236, 72, 153, 0.22)',
+                },
+            }, {
+                'background-color': '#f472b6',
+                border: '1px solid rgba(244, 114, 182, 0.85)',
+                'box-shadow': '0 0 28px rgba(236, 72, 153, 0.22)',
+            });
+        }
+
+        return addCanvasComponent({
+            tagName: 'div',
+            attributes: { 'data-dc-type': 'shape-triangle' },
+            content: `
+                <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 ${Math.round(bounds.width)} ${Math.round(bounds.height)}" preserveAspectRatio="none" fill="none">
+                    <polygon points="${Math.round(bounds.width / 2)},0 0,${Math.round(bounds.height)} ${Math.round(bounds.width)},${Math.round(bounds.height)}" fill="#f472b6" stroke="rgba(244, 114, 182, 0.88)" stroke-width="2" />
+                </svg>
+            `,
+            style: {
+                position: 'absolute',
+                left: `${Math.round(bounds.left)}px`,
+                top: `${Math.round(bounds.top)}px`,
+                width: `${Math.round(bounds.width)}px`,
+                height: `${Math.round(bounds.height)}px`,
+                'background-color': 'transparent',
+                filter: 'drop-shadow(0 0 18px rgba(236, 72, 153, 0.35))',
+                overflow: 'visible',
+            },
+        });
+    }, [addCanvasComponent, makeShapeBounds]);
+
+    const insertLineAtPoints = useCallback((start: CanvasPoint, end: CanvasPoint) => {
+        const normalized = makeLineBounds(start, end);
+        const minX = Math.min(normalized.start.x, normalized.end.x);
+        const minY = Math.min(normalized.start.y, normalized.end.y);
+        const maxX = Math.max(normalized.start.x, normalized.end.x);
+        const maxY = Math.max(normalized.start.y, normalized.end.y);
+        const padding = 8;
+        const width = Math.max(Math.ceil(maxX - minX) + padding * 2, MIN_DRAW_SIZE);
+        const height = Math.max(Math.ceil(maxY - minY) + padding * 2, MIN_DRAW_SIZE);
+        const x1 = normalized.start.x - minX + padding;
+        const y1 = normalized.start.y - minY + padding;
+        const x2 = normalized.end.x - minX + padding;
+        const y2 = normalized.end.y - minY + padding;
+
+        return addCanvasComponent({
+            tagName: 'div',
+            attributes: { 'data-dc-type': 'shape-line' },
+            content: `
+                <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" fill="none">
+                    <line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#f472b6" stroke-width="${DRAW_STROKE_WIDTH}" stroke-linecap="round" />
+                </svg>
+            `,
+            style: {
+                position: 'absolute',
+                left: `${Math.round(minX - padding)}px`,
+                top: `${Math.round(minY - padding)}px`,
+                width: `${width}px`,
+                height: `${height}px`,
+                'background-color': 'transparent',
+                'box-shadow': '0 0 18px rgba(236, 72, 153, 0.42)',
+                overflow: 'visible',
+            },
+        });
+    }, [addCanvasComponent, makeLineBounds]);
+
+    const insertPencilStroke = useCallback((points: CanvasPoint[]) => {
+        if (points.length < 2) return null;
+
+        const minX = Math.min(...points.map((point) => point.x));
+        const minY = Math.min(...points.map((point) => point.y));
+        const maxX = Math.max(...points.map((point) => point.x));
+        const maxY = Math.max(...points.map((point) => point.y));
+        const padding = 10;
+        const width = Math.max(Math.ceil(maxX - minX) + padding * 2, 24);
+        const height = Math.max(Math.ceil(maxY - minY) + padding * 2, 24);
+        const pathData = buildPathData(points, minX - padding, minY - padding);
+        const gradientId = `dc-draw-gradient-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+        const content = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" fill="none">
+                <defs>
+                    <linearGradient id="${gradientId}" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#c084fc" />
+                        <stop offset="100%" stop-color="#f472b6" />
+                    </linearGradient>
+                </defs>
+                <path d="${pathData}" stroke="url(#${gradientId})" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+        `;
+
+        return addCanvasComponent({
+            tagName: 'div',
+            attributes: { 'data-dc-type': 'freehand-path' },
+            content,
+            style: {
+                position: 'absolute',
+                left: `${Math.round(minX - padding)}px`,
+                top: `${Math.round(minY - padding)}px`,
+                width: `${width}px`,
+                height: `${height}px`,
+                'background-color': 'transparent',
+                overflow: 'visible',
+            },
+        });
+    }, [addCanvasComponent, buildPathData]);
+
+    // Canvas handlers
+    const {
+        setCanvasZoom,
+        beginPan,
+        movePan,
+        endPan,
+        handleZoomIn,
+        handleZoomOut,
+        handleZoomReset,
+        handleZoomSliderChange,
+    } = useCanvasHandlers(editor, zoomRef, setZoomLevel);
+
+    // Component handlers
+    const {
+        handleDelete,
+        handleUndo,
+        handleRedo,
+        handleDuplicate,
+        moveLayer,
+        handleGroup,
+    } = useComponentHandlers(editor, syncCanvasSchema);
+
+    // File handlers
+    const {
+        handleExportJson,
+        handleImportFile,
+        handleImageUpload,
+    } = useFileHandlers(editor, projectName, setSaveMsg, syncCanvasSchema);
+
+    // Drag and drop
+    const {
+        handleInsertBlock,
+        handleBlockDragStart,
+        handleCanvasDragOver,
+        handleCanvasDrop,
+    } = useDragDropHandlers(editor, sidebarBlocks, snapRef, syncCanvasSchema, draggedBlockIdRef, draggedBlockRef);
+
+    // Save handler
+    const { handleSave } = useSaveHandler(
+        editor,
+        userId,
+        currentProjectId,
+        projectName,
+        setSaving,
+        setSaveMsg,
+        setCurrentProjectId,
+        pagesRef,
+        activePageIndexRef,
+        snapshotCurrentPage,
+    );
+
+    // Close context menu callback
+    const closeContextMenu = useCallback(() => {
+        setContextMenu((prev) => ({ ...prev, open: false }));
+    }, [setContextMenu]);
+
+    const handleSelectPage = useCallback((targetIndex: number) => {
+        if (!editor) return;
+        if (targetIndex < 0 || targetIndex >= pagesRef.current.length) return;
+        if (targetIndex === activePageIndexRef.current) return;
+
+        const snapshotPages = snapshotCurrentPage() ?? pagesRef.current;
+        const targetPage = snapshotPages[targetIndex];
+        if (!targetPage) return;
+
+        pagesRef.current = snapshotPages;
+        setPages(snapshotPages);
+        activePageIndexRef.current = targetIndex;
+        setActivePageIndex(targetIndex);
+        applyPageToCanvas(targetPage);
+    }, [editor, snapshotCurrentPage, pagesRef, activePageIndexRef, setPages, setActivePageIndex, applyPageToCanvas]);
+
+    const handleCreatePage = useCallback(() => {
+        if (!editor) return;
+
+        const snapshotPages = snapshotCurrentPage() ?? pagesRef.current;
+        const nextIndex = snapshotPages.length;
+        const newPage: CanvasPage = {
+            id: `page-${Date.now()}-${nextIndex + 1}`,
+            name: `Pagina ${nextIndex + 1}`,
             components: [],
             styles: [],
             schema: [],
-        },
-    ]), []);
-
-    const [editor, setEditor] = useState<EditorInstance | null>(null);
-    const [saving, setSaving] = useState(false);
-    const [saveMsg, setSaveMsg] = useState('');
-    const [currentProjectId, setCurrentProjectId] = useState(initialProjectId);
-    const [projectName, setProjectName] = useState(initialProjectName ?? 'Sem titulo');
-    const [snapEnabled, setSnapEnabled] = useState(true);
-    const [canvasStructure, setCanvasStructure] = useState<CanvasElementNode[]>([]);
-    const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(true);
-    const [contextMenu, setContextMenu] = useState<ContextMenuState>({ open: false, x: 0, y: 0 });
-    const [zoomLevel, setZoomLevel] = useState(100);
-    const [activeGroupId, setActiveGroupId] = useState<string>('layouts-pre-definidos');
-    const [leftPanelMode, setLeftPanelMode] = useState<'elements' | 'properties'>('elements');
-    const [sidebarBlocks, setSidebarBlocks] = useState<SidebarBlockItem[]>([]);
-    const [pages, setPages] = useState<CanvasPage[]>(initialPages);
-    const [activePageIndex, setActivePageIndex] = useState(0);
-    const [isPanning, setIsPanning] = useState(false);
-
-    const fileInputRef = useRef<HTMLInputElement | null>(null);
-    const imageInputRef = useRef<HTMLInputElement | null>(null);
-    const canvasShellRef = useRef<HTMLDivElement | null>(null);
-    const snapRef = useRef(snapEnabled);
-    const pagesRef = useRef<CanvasPage[]>(initialPages);
-    const activePageIndexRef = useRef(0);
-    const zoomRef = useRef(zoomLevel);
-    const panStartRef = useRef<{ x: number; y: number } | null>(null);
-    const spacePressedRef = useRef(false);
-    const draggedBlockIdRef = useRef<string | null>(null);
-    const draggedBlockRef = useRef<SidebarBlockItem | null>(null);
-    snapRef.current = snapEnabled;
-
-    const syncCanvasSchema = useCallback((instance: EditorInstance) => {
-        const next = serializeCanvas(instance);
-        setCanvasStructure(next);
-    }, []);
-
-    useEffect(() => {
-        pagesRef.current = pages;
-    }, [pages]);
-
-    useEffect(() => {
-        activePageIndexRef.current = activePageIndex;
-    }, [activePageIndex]);
-
-    useEffect(() => {
-        zoomRef.current = zoomLevel;
-    }, [zoomLevel]);
-
-    const applyCanvasBackdrop = useCallback((instance: EditorInstance, enabled: boolean) => {
-        const doc = instance.Canvas.getDocument();
-        if (!doc?.body) return;
-
-        doc.body.style.margin = '0';
-        doc.body.style.width = `${PAGE_WIDTH}px`;
-        doc.body.style.height = `${PAGE_HEIGHT}px`;
-        doc.body.style.minHeight = `${PAGE_HEIGHT}px`;
-        doc.body.style.maxHeight = `${PAGE_HEIGHT}px`;
-        doc.body.style.overflow = 'hidden';
-        doc.body.style.position = 'relative';
-        doc.body.style.backgroundColor = '#ffffff';
-        doc.body.style.border = '2px solid rgba(124, 58, 237, 0.95)';
-        doc.body.style.borderRadius = '0px';
-        doc.body.style.overflow = 'hidden';
-        doc.body.style.boxShadow = '0 26px 70px rgba(2, 6, 23, 0.55)';
-        doc.body.style.backgroundImage = enabled
-            ? `linear-gradient(to right, rgba(148, 163, 184, 0.22) 1px, transparent 1px), linear-gradient(to bottom, rgba(148, 163, 184, 0.22) 1px, transparent 1px)`
-            : 'none';
-        doc.body.style.backgroundSize = enabled ? `${GRID_STEP}px ${GRID_STEP}px` : 'auto';
-
-        if (doc.documentElement) {
-            doc.documentElement.style.background = '#0a0318';
-            doc.documentElement.style.minHeight = '100%';
-            doc.documentElement.style.height = '100%';
-            doc.documentElement.style.overflow = 'hidden';
-        }
-    }, []);
-
-    const groupedSidebar = useMemo(() => {
-        const groupMap = new Map<string, SidebarGroup>();
-        const blockMap = new Map<string, SidebarBlockItem[]>();
-
-        sidebarBlocks.forEach((item) => {
-            const fallbackGroup: SidebarGroup = {
-                id: item.categoryId,
-                label: item.categoryLabel,
-                icon: 'component',
-            };
-            const group = CATEGORY_TO_GROUP[item.categoryId] ?? fallbackGroup;
-            groupMap.set(group.id, group);
-            if (!blockMap.has(group.id)) blockMap.set(group.id, []);
-            blockMap.get(group.id)?.push(item);
-        });
-
-        const preferredOrder = ['layouts-pre-definidos', 'formas', 'componentes-ui', 'imagens', 'texto'];
-        const sortedGroups = [...groupMap.values()].sort((a, b) => {
-            const ia = preferredOrder.indexOf(a.id);
-            const ib = preferredOrder.indexOf(b.id);
-            const sa = ia === -1 ? 999 : ia;
-            const sb = ib === -1 ? 999 : ib;
-            return sa - sb;
-        });
-
-        return sortedGroups.map((group) => ({
-            ...group,
-            blocks: blockMap.get(group.id) ?? [],
-        }));
-    }, [sidebarBlocks]);
-
-    const activeGroup = useMemo(
-        () => groupedSidebar.find((group) => group.id === activeGroupId) ?? groupedSidebar[0],
-        [groupedSidebar, activeGroupId],
-    );
-
-    const setCanvasZoom = useCallback((next: number) => {
-        if (!editor) return;
-        const clamped = Math.max(30, Math.min(200, Math.round(next)));
-        editor.Canvas.setZoom(clamped);
-        setZoomLevel(clamped);
-    }, [editor]);
-
-    const panCanvasBy = useCallback((deltaX: number, deltaY: number) => {
-        if (!editor) return;
-        const canvas = editor.Canvas as unknown as CanvasCoordsApi;
-        if (!canvas.getCoords || !canvas.setCoords) return;
-        const coords = canvas.getCoords();
-        canvas.setCoords(coords.x + deltaX, coords.y + deltaY);
-    }, [editor]);
-
-    const beginPan = useCallback((clientX: number, clientY: number) => {
-        panStartRef.current = { x: clientX, y: clientY };
-        setIsPanning(true);
-    }, []);
-
-    const movePan = useCallback((clientX: number, clientY: number) => {
-        const start = panStartRef.current;
-        if (!start) return;
-        const deltaX = clientX - start.x;
-        const deltaY = clientY - start.y;
-        panCanvasBy(deltaX, deltaY);
-        panStartRef.current = { x: clientX, y: clientY };
-    }, [panCanvasBy]);
-
-    const endPan = useCallback(() => {
-        panStartRef.current = null;
-        setIsPanning(false);
-    }, []);
-
-    const snapshotCurrentPage = useCallback(() => {
-        if (!editor) return;
-        const idx = activePageIndexRef.current;
-        const current = pagesRef.current[idx];
-        if (!current) return;
-
-        const nextPage: CanvasPage = {
-            ...current,
-            components: editor.getComponents() as unknown as unknown[],
-            styles: editor.getStyle() as unknown,
-            schema: serializeCanvas(editor),
         };
 
-        const nextPages = [...pagesRef.current];
-        nextPages[idx] = nextPage;
+        const nextPages = [...snapshotPages, newPage];
         pagesRef.current = nextPages;
         setPages(nextPages);
-    }, [editor]);
+        activePageIndexRef.current = nextIndex;
+        setActivePageIndex(nextIndex);
+        applyPageToCanvas(newPage);
+    }, [editor, snapshotCurrentPage, pagesRef, activePageIndexRef, setPages, setActivePageIndex, applyPageToCanvas]);
 
-    const applyPageToCanvas = useCallback((page: CanvasPage) => {
-        if (!editor) return;
-        const wrapper = editor.getWrapper() as unknown as AnyComponent;
-        if (!wrapper) return;
+    const captureCanvasSnapshot = useCallback(() => {
+        if (!editor) {
+            return {
+                canvasDocumentHtml: '',
+                canvasBodyHtml: '',
+                wrapperHtml: '',
+                wrapperBounds: { width: PAGE_WIDTH, height: PAGE_HEIGHT } as WrapperBoundsSnapshot,
+                wrapperElements: [] as WrapperElementSnapshot[],
+            };
+        }
 
-        wrapper.components().reset(page.components ?? []);
-        editor.setStyle((page.styles as never) ?? ([] as never));
-        syncCanvasSchema(editor);
-    }, [editor, syncCanvasSchema]);
+        const canvasApi = (editor as { Canvas?: { getDocument?: () => Document | null } }).Canvas;
+        const canvasDoc = canvasApi?.getDocument?.();
+        if (!canvasDoc?.body || !canvasDoc.documentElement) {
+            return {
+                canvasDocumentHtml: '',
+                canvasBodyHtml: '',
+                wrapperHtml: '',
+                wrapperBounds: { width: PAGE_WIDTH, height: PAGE_HEIGHT } as WrapperBoundsSnapshot,
+                wrapperElements: [] as WrapperElementSnapshot[],
+            };
+        }
 
-    useEffect(() => {
-        const instance = grapesjs.init({
-            container: '#gjs',
-            height: '100%',
-            width: '100%',
-            fromElement: false,
-            storageManager: false,
-            dragMode: 'absolute',
-            selectorManager: { componentFirst: true },
-            panels: { defaults: [] },
-            blockManager: {},
-            styleManager: {
-                appendTo: '#styles',
-                sectors: [
-                    {
-                        name: 'Cores',
-                        open: true,
-                        properties: ['background-color', 'color', 'opacity'],
-                    },
-                    {
-                        name: 'Texto',
-                        open: true,
-                        properties: ['font-size', 'font-weight', 'line-height', 'text-align'],
-                    },
-                    {
-                        name: 'Borda',
-                        open: true,
-                        properties: ['border-width', 'border-style', 'border-color', 'border-radius'],
-                    },
-                    {
-                        name: 'Dimensao',
-                        open: true,
-                        properties: ['width', 'height', 'max-width', 'min-height'],
-                    },
-                    {
-                        name: 'Posicao e Espacamento',
-                        open: true,
-                        properties: ['position', 'left', 'top', 'right', 'bottom', 'z-index', 'padding', 'margin'],
-                    },
-                    {
-                        name: 'Transform',
-                        open: false,
-                        properties: ['transform'],
-                    },
-                ],
-            },
-            layerManager: { appendTo: '#layers' },
-            traitManager: { appendTo: '#traits' },
-            canvas: {
-                customSpots: { target: true },
-                styles: [
-                    `
-                    * { box-sizing: border-box; }
-                    html { background: #050812; min-height: 100%; height: 100%; overflow: hidden; }
-                    body { margin: 0; width: ${PAGE_WIDTH}px; height: ${PAGE_HEIGHT}px; min-height: ${PAGE_HEIGHT}px; max-height: ${PAGE_HEIGHT}px; overflow: hidden; background: #ffffff; position: relative; }
-                `,
-                ],
-            },
-        });
-
-        instance.Canvas.setCustomBadgeLabel(() => '');
-        const removeTargetSpots = () => {
-            instance.Canvas.removeSpots({ type: 'target' });
+        const wrapper = canvasDoc.body.querySelector('[data-gjs-type="wrapper"]') as HTMLElement | null;
+        const wrapperRect = wrapper?.getBoundingClientRect();
+        const wrapperBounds: WrapperBoundsSnapshot = {
+            width: Math.round(wrapperRect?.width || PAGE_WIDTH),
+            height: Math.round(wrapperRect?.height || PAGE_HEIGHT),
         };
-        const hideComponentOverlayName = (component: AnyComponent) => {
-            component.set('badgable', false);
-            component.set('name', '');
-            component.set('icon', '');
-        };
-        blocksElements(instance);
-        applyCanvasBackdrop(instance, snapRef.current);
-        instance.Canvas.setZoom(100);
-        const disableBadgesDeep = (component: AnyComponent) => {
-            hideComponentOverlayName(component);
-            const children = component.components?.().models ?? [];
-            children.forEach((child) => disableBadgesDeep(child));
-        };
-        const rawBlockModels = (instance.BlockManager.getAll().models ?? []) as Array<{
-            id?: string;
-            getId?: () => string;
-            get: (key: string) => unknown;
-        }>;
-        const blockItems = rawBlockModels.map((block) => {
-            const categoryRaw = block.get('category');
-            const categoryLabel =
-                typeof categoryRaw === 'string'
-                    ? categoryRaw
-                    : String(
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        (categoryRaw as any)?.get?.('label') ??
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        (categoryRaw as any)?.label ??
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        (categoryRaw as any)?.id ??
-                        'Outros',
-                    );
-            const categoryId = slugify(categoryLabel);
 
-            const dcTitle = block.get('dcTitle');
-            const rawLabel = String(block.get('label') ?? '');
-            const fallbackLabel = stripHtml(rawLabel) || 'Bloco';
-            const label = typeof dcTitle === 'string' ? dcTitle : fallbackLabel;
-            const resolvedId = String(block.getId?.() ?? block.get('id') ?? block.id ?? '').trim();
-            const content = block.get('content');
+        const serializeWrapperElement = (element: HTMLElement): WrapperElementSnapshot => {
+            const computed = canvasDoc.defaultView?.getComputedStyle(element);
+            const rect = element.getBoundingClientRect();
+            const attributes = Object.fromEntries(
+                Array.from(element.attributes)
+                    .filter((attribute) => !attribute.name.startsWith('data-gjs-'))
+                    .map((attribute) => [attribute.name, attribute.value]),
+            );
 
             return {
-                id: resolvedId,
-                label,
-                categoryId,
-                categoryLabel,
-                previewHtml: rawLabel,
-                content,
+                id: element.id || '',
+                tagName: element.tagName.toLowerCase(),
+                type: element.getAttribute('data-dc-type') || element.getAttribute('data-gjs-type') || 'default',
+                text: element.textContent?.trim() || '',
+                html: element.innerHTML,
+                position: {
+                    x: Math.round(rect.left - (wrapperRect?.left || rect.left)),
+                    y: Math.round(rect.top - (wrapperRect?.top || rect.top)),
+                },
+                size: {
+                    width: Math.round(rect.width),
+                    height: Math.round(rect.height),
+                },
+                style: {
+                    display: computed?.display || '',
+                    position: computed?.position || '',
+                    backgroundColor: computed?.backgroundColor || '',
+                    color: computed?.color || '',
+                    fontSize: computed?.fontSize || '',
+                    fontWeight: computed?.fontWeight || '',
+                    borderRadius: computed?.borderRadius || '',
+                    borderWidth: computed?.borderWidth || '',
+                    borderColor: computed?.borderColor || '',
+                    borderStyle: computed?.borderStyle || '',
+                    opacity: computed?.opacity || '',
+                    boxShadow: computed?.boxShadow || '',
+                    transform: computed?.transform || '',
+                    zIndex: computed?.zIndex || '',
+                },
+                attributes,
+                children: Array.from(element.children)
+                    .filter((child): child is HTMLElement => child instanceof HTMLElement)
+                    .map(serializeWrapperElement),
             };
-        }).filter((item) => item.id.length > 0);
-        setSidebarBlocks(blockItems);
-
-        instance.on('load', () => {
-            const wrapper = instance.getWrapper() as unknown as AnyComponent;
-            if (wrapper) disableBadgesDeep(wrapper);
-            removeTargetSpots();
-            applyCanvasBackdrop(instance, snapRef.current);
-            syncCanvasSchema(instance);
-        });
-
-        instance.on('canvas:spot:add', (payload: unknown) => {
-            const spot = (payload as { spot?: { getType?: () => string } })?.spot;
-            if (spot?.getType?.() === 'target') removeTargetSpots();
-        });
-
-        instance.on('component:add', (raw: unknown) => {
-            const component = raw as AnyComponent;
-            const parent = component.parent();
-            if (!parent) return;
-
-            hideComponentOverlayName(component);
-            removeTargetSpots();
-            const isRoot = parent.is('wrapper');
-            if (isRoot) {
-                const style = component.getStyle?.() ?? {};
-                component.setStyle({
-                    position: 'absolute',
-                    left: style.left || '64px',
-                    top: style.top || '64px',
-                    width: style.width || '260px',
-                    height: style.height || '120px',
-                    ...style,
-                });
-            }
-
-            component.set('resizable', {
-                tl: 1,
-                tc: 1,
-                tr: 1,
-                cl: 1,
-                cr: 1,
-                bl: 1,
-                bc: 1,
-                br: 1,
-                keyWidth: 'width',
-                keyHeight: 'height',
-            });
-            component.set('copyable', true);
-        });
-
-        instance.on('component:drag:end', (raw: unknown) => {
-            const component = raw as AnyComponent;
-            if (snapRef.current) applySnapForComponent(component);
-            syncCanvasSchema(instance);
-        });
-
-        const normalizeComponentBackground = (component: AnyComponent) => {
-            const style = component.getStyle?.() ?? {};
-            const bgColorRaw = String(style['background-color'] ?? style.backgroundColor ?? '').trim();
-            const bgRaw = String(style.background ?? '').trim();
-            const bgImage = String(style['background-image'] ?? style.backgroundImage ?? '');
-            const hasSolidBackground = (
-                (bgColorRaw.length > 0 && bgColorRaw !== 'transparent')
-                || (bgRaw.length > 0 && !bgRaw.includes('gradient'))
-            );
-            if (!hasSolidBackground) return;
-
-            const bg = String(style.background ?? '');
-            const hasGradient = bgImage.includes('gradient') || bg.includes('gradient');
-            if (!hasGradient) return;
-
-            const nextStyle = { ...style } as Record<string, string | number | undefined>;
-            delete nextStyle['background-image'];
-            delete nextStyle.backgroundImage;
-            delete nextStyle.background;
-            component.setStyle(nextStyle as Record<string, string | number>);
         };
 
-        instance.on('component:styleUpdate:background-color', (raw: unknown) => {
-            normalizeComponentBackground(raw as AnyComponent);
+        return {
+            canvasDocumentHtml: canvasDoc.documentElement.outerHTML,
+            canvasBodyHtml: canvasDoc.body.outerHTML,
+            wrapperHtml: wrapper?.innerHTML || '',
+            wrapperBounds,
+            wrapperElements: wrapper
+                ? Array.from(wrapper.children)
+                    .filter((child): child is HTMLElement => child instanceof HTMLElement)
+                    .map(serializeWrapperElement)
+                : [],
+        };
+    }, [editor]);
+
+    const buildSketchHints = useCallback(() => {
+        const flattened = canvasStructure.flatMap((node) => {
+            const stack = [node];
+            const output: typeof canvasStructure = [];
+
+            while (stack.length > 0) {
+                const current = stack.shift();
+                if (!current) continue;
+                output.push(current);
+                if (current.children?.length) {
+                    stack.push(...current.children);
+                }
+            }
+
+            return output;
         });
 
-        instance.on('component:styleUpdate:background', (raw: unknown) => {
-            normalizeComponentBackground(raw as AnyComponent);
-        });
+        const freehand = flattened.filter((node) => node.type === 'freehand-path');
+        const lines = flattened.filter((node) => node.type === 'shape-line');
+        const titles = flattened.filter((node) => node.type === 'title');
+        const images = flattened.filter((node) => node.type.includes('image'));
 
-        instance.on('component:styleUpdate', (raw: unknown) => {
-            normalizeComponentBackground(raw as AnyComponent);
-        });
+        return {
+            freehandCount: freehand.length,
+            lineCount: lines.length,
+            titleCount: titles.length,
+            imageCount: images.length,
+            freehandRegions: freehand.map((node) => ({
+                x: node.position.x,
+                y: node.position.y,
+                width: node.size.width,
+                height: node.size.height,
+            })),
+        };
+    }, [canvasStructure]);
 
-        const schemaEvents = ['component:update', 'component:styleUpdate', 'component:remove', 'component:resize', 'component:clone', 'sorter:drag:end'];
-        schemaEvents.forEach((eventName) => {
-            instance.on(eventName, () => syncCanvasSchema(instance));
-        });
+    const handleGenerateAi = useCallback(async () => {
+        if (!editor) {
+            setSaveMsg('Editor indisponivel para gerar com IA.');
+            return;
+        }
 
+        setAiGenerating(true);
+        setAiPreview(null);
+        setSaveMsg('Gerando analise com IA...');
+
+        try {
+            const { canvasDocumentHtml, canvasBodyHtml, wrapperHtml, wrapperBounds, wrapperElements } = captureCanvasSnapshot();
+            const response = await fetch('/api/ai/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    projectName,
+                    html: editor.getHtml(),
+                    css: editor.getCss(),
+                    canvasDocumentHtml,
+                    canvasBodyHtml,
+                    wrapperHtml,
+                    wrapperBounds,
+                    wrapperElements,
+                    canvasStructure,
+                    pages: pagesRef.current,
+                    sketchHints: buildSketchHints(),
+                }),
+            });
+
+            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(typeof result?.error === 'string' ? result.error : 'Falha ao gerar com IA.');
+            }
+
+            const nextOutput = JSON.stringify(result.output, null, 2);
+            setAiOutput(nextOutput);
+            setAiPreview(result.output as AIGenerationResult);
+            setLeftSidebarCollapsed(false);
+            setLeftPanelMode('properties');
+            setSaveMsg('Preview da IA gerado com sucesso.');
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Falha ao gerar com IA.';
+            setSaveMsg(message);
+        } finally {
+            setAiGenerating(false);
+        }
+    }, [
+        editor,
+        projectName,
+        canvasStructure,
+        pagesRef,
+        captureCanvasSnapshot,
+        buildSketchHints,
+        setAiGenerating,
+        setAiOutput,
+        setAiPreview,
+        setLeftSidebarCollapsed,
+        setLeftPanelMode,
+        setSaveMsg,
+    ]);
+
+    // Sync page refs
+    useSyncPageRefs(pages, pagesRef, activePageIndex, activePageIndexRef, zoomLevel, zoomRef, snapEnabled, snapRef);
+    // Initialize editor on mount
+    useEffect(() => {
+        const instance = initializeGrapesJS(snapRef, setSidebarBlocks, applyCanvasBackdrop, syncCanvasSchema);
         setEditor(instance);
-
         return () => {
             instance.destroy();
             setEditor(null);
         };
-    }, [applyCanvasBackdrop, syncCanvasSchema]);
+    }, [applyCanvasBackdrop, syncCanvasSchema, setSidebarBlocks, setEditor, snapRef]);
 
+    // Apply canvas backdrop when snap changes
     useEffect(() => {
         if (!editor) return;
         applyCanvasBackdrop(editor, snapEnabled);
@@ -426,559 +772,169 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
 
     useEffect(() => {
         if (!editor) return;
-        const shell = canvasShellRef.current;
-        const canvasDoc = editor.Canvas.getDocument();
-        if (!shell || !canvasDoc) return;
+        const canvasApi = (editor as { Canvas?: { getDocument?: () => Document | null } }).Canvas;
+        const canvasDoc = canvasApi?.getDocument?.();
+        const body = canvasDoc?.body;
+        if (!body) return;
 
-        const onWheel = (event: WheelEvent) => {
-            const isZoomGesture = event.ctrlKey || event.metaKey;
+        body.style.cursor = drawModeActive && activeDrawTool !== 'select' ? 'crosshair' : '';
+
+        return () => {
+            body.style.cursor = '';
+        };
+    }, [editor, drawModeActive, activeDrawTool]);
+
+    useEffect(() => {
+        if (!editor || !drawModeActive) {
+            clearPreviewElement(drawStrokeRef.current);
+            drawStrokeRef.current = null;
+            return;
+        }
+
+        const canvasApi = (editor as { Canvas?: { getDocument?: () => Document | null } }).Canvas;
+        const canvasDoc = canvasApi?.getDocument?.();
+        if (!canvasDoc) return;
+
+        const consumeEvent = (event: MouseEvent) => {
             event.preventDefault();
-
-            if (isZoomGesture) {
-                const nextZoom = zoomRef.current - event.deltaY * 0.08;
-                setCanvasZoom(nextZoom);
-                return;
-            }
-
-            // Two-finger scroll (trackpad) and mouse wheel pan the canvas viewport.
-            panCanvasBy(-event.deltaX, -event.deltaY);
+            event.stopPropagation();
+            event.stopImmediatePropagation();
         };
 
         const onMouseDown = (event: MouseEvent) => {
-            const target = event.target;
-            const isComponentTarget = (
-                target instanceof HTMLElement
-                && Boolean(target.closest('[data-gjs-type]'))
-            );
-            const hasSelectedComponent = Boolean(editor.getSelected());
-            const leftDragWithoutSelection = (
-                event.button === 0
-                && !hasSelectedComponent
-                && !isComponentTarget
-                && !isInputElement(target)
-            );
-            const shouldPan = event.button === 1 || (event.button === 0 && spacePressedRef.current) || leftDragWithoutSelection;
-            if (!shouldPan) return;
-            event.preventDefault();
-            beginPan(event.clientX, event.clientY);
+            if (event.button !== 0 || activeDrawTool === 'select') return;
+
+            const point = resolveCanvasPoint(event);
+            if (!point) return;
+
+            if (activeDrawTool === 'text') {
+                consumeEvent(event);
+                insertBlockAtPoint('text-title', point);
+                return;
+            }
+
+            if (
+                activeDrawTool === 'square' ||
+                activeDrawTool === 'circle' ||
+                activeDrawTool === 'triangle' ||
+                activeDrawTool === 'line' ||
+                activeDrawTool === 'pencil'
+            ) {
+                consumeEvent(event);
+                const previewElement = createPreviewElement(canvasDoc);
+                drawStrokeRef.current = { start: point, points: [point], previewElement };
+                renderPreview(activeDrawTool, drawStrokeRef.current);
+            }
         };
 
         const onMouseMove = (event: MouseEvent) => {
-            if (!panStartRef.current) return;
-            event.preventDefault();
-            movePan(event.clientX, event.clientY);
-        };
+            if (!drawStrokeRef.current) return;
+            consumeEvent(event);
+            const point = resolveCanvasPoint(event);
+            if (!point) return;
 
-        const onMouseUp = () => endPan();
-
-        const onKeyDown = (event: KeyboardEvent) => {
-            if (event.code === 'Space' && !isInputElement(event.target)) {
-                spacePressedRef.current = true;
-            }
-        };
-
-        const onKeyUp = (event: KeyboardEvent) => {
-            if (event.code === 'Space') {
-                spacePressedRef.current = false;
-                endPan();
-            }
-        };
-
-        shell.addEventListener('wheel', onWheel, { passive: false });
-        shell.addEventListener('mousedown', onMouseDown);
-        canvasDoc.addEventListener('wheel', onWheel, { passive: false });
-        canvasDoc.addEventListener('mousedown', onMouseDown);
-        window.addEventListener('mousemove', onMouseMove);
-        window.addEventListener('mouseup', onMouseUp);
-        window.addEventListener('keydown', onKeyDown);
-        window.addEventListener('keyup', onKeyUp);
-
-        return () => {
-            shell.removeEventListener('wheel', onWheel);
-            shell.removeEventListener('mousedown', onMouseDown);
-            canvasDoc.removeEventListener('wheel', onWheel);
-            canvasDoc.removeEventListener('mousedown', onMouseDown);
-            window.removeEventListener('mousemove', onMouseMove);
-            window.removeEventListener('mouseup', onMouseUp);
-            window.removeEventListener('keydown', onKeyDown);
-            window.removeEventListener('keyup', onKeyUp);
-        };
-    }, [editor, beginPan, endPan, movePan, panCanvasBy, setCanvasZoom]);
-
-    const withSelected = useCallback((run: (selected: AnyComponent) => void): boolean => {
-        if (!editor) return false;
-        const selected = editor.getSelected() as unknown as AnyComponent | null;
-        if (!selected) return false;
-        run(selected);
-        syncCanvasSchema(editor);
-        return true;
-    }, [editor, syncCanvasSchema]);
-
-    const handleDelete = useCallback(() => {
-        withSelected((selected) => selected.remove());
-    }, [withSelected]);
-
-    const handleUndo = useCallback(() => {
-        editor?.UndoManager.undo();
-        if (editor) syncCanvasSchema(editor);
-    }, [editor, syncCanvasSchema]);
-
-    const handleRedo = useCallback(() => {
-        editor?.UndoManager.redo();
-        if (editor) syncCanvasSchema(editor);
-    }, [editor, syncCanvasSchema]);
-
-    const handleDuplicate = useCallback(() => {
-        withSelected((selected) => {
-            const parent = selected.parent();
-            if (!parent) return;
-
-            const collection = parent.components();
-            const index = collection.models.indexOf(selected);
-            const cloneJson = selected.toJSON() as Record<string, unknown>;
-            const style = (cloneJson.style ?? {}) as Record<string, string | number | undefined>;
-            cloneJson.style = {
-                ...style,
-                left: `${parseNumericValue(style.left, 0) + 24}px`,
-                top: `${parseNumericValue(style.top, 0) + 24}px`,
-            };
-            const next = unwrapAddedComponent(collection.add(cloneJson, { at: index + 1 }));
-            selectComponent(editor, next);
-        });
-    }, [editor, withSelected]);
-
-    const moveLayer = useCallback((direction: 'up' | 'down') => {
-        withSelected((selected) => {
-            const parent = selected.parent();
-            if (!parent) return;
-
-            const collection = parent.components();
-            const current = collection.models.indexOf(selected);
-            const nextIndex = direction === 'up' ? current + 1 : current - 1;
-            if (nextIndex < 0 || nextIndex >= collection.models.length) return;
-
-            const data = selected.toJSON();
-            selected.remove();
-            const moved = unwrapAddedComponent(collection.add(data, { at: nextIndex }));
-            selectComponent(editor, moved);
-        });
-    }, [editor, withSelected]);
-
-    const handleGroup = useCallback(() => {
-        withSelected((selected) => {
-            const parent = selected.parent();
-            if (!parent) return;
-
-            const collection = parent.components();
-            const currentIndex = collection.models.indexOf(selected);
-            const selectedStyle = selected.getStyle?.() ?? {};
-            const selectedJson = selected.toJSON();
-            selected.remove();
-
-            const wrapperData = {
-                tagName: 'div',
-                attributes: { 'data-dc-type': 'group' },
-                style: {
-                    position: selectedStyle.position || 'absolute',
-                    left: selectedStyle.left || '64px',
-                    top: selectedStyle.top || '64px',
-                    width: selectedStyle.width || '300px',
-                    height: selectedStyle.height || '200px',
-                    padding: '10px',
-                    border: '1px dashed #94a3b8',
-                    'border-radius': '12px',
-                    'background-color': 'rgba(248, 250, 252, 0.62)',
-                },
-                components: [selectedJson],
-            };
-
-            const group = unwrapAddedComponent(collection.add(wrapperData, { at: currentIndex }));
-            selectComponent(editor, group);
-        });
-    }, [editor, withSelected]);
-
-    const handleZoomIn = useCallback(() => {
-        setCanvasZoom(zoomLevel + 10);
-    }, [zoomLevel, setCanvasZoom]);
-
-    const handleZoomOut = useCallback(() => {
-        setCanvasZoom(zoomLevel - 10);
-    }, [zoomLevel, setCanvasZoom]);
-
-    const handleZoomReset = useCallback(() => {
-        setCanvasZoom(100);
-    }, [setCanvasZoom]);
-
-    const handleZoomSliderChange = useCallback((value: number) => {
-        setCanvasZoom(value);
-    }, [setCanvasZoom]);
-
-    const closeContextMenu = useCallback(() => {
-        setContextMenu((prev) => ({ ...prev, open: false }));
-    }, []);
-
-    const buildExportPayload = useCallback(() => {
-        if (!editor) return null;
-        snapshotCurrentPage();
-        const schema = serializeCanvas(editor);
-        setCanvasStructure(schema);
-        return {
-            projectName,
-            exportedAt: new Date().toISOString(),
-            schema,
-            pages: pagesRef.current,
-            activePageIndex: activePageIndexRef.current,
-        };
-    }, [editor, projectName, snapshotCurrentPage]);
-
-    const handleExportJson = useCallback(() => {
-        const payload = buildExportPayload();
-        if (!payload) return;
-
-        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        const safeName = projectName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-        link.href = url;
-        link.download = `${safeName || 'projeto'}-canvas.json`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        URL.revokeObjectURL(url);
-    }, [buildExportPayload, projectName]);
-
-    const importSchema = useCallback((nodes: CanvasElementNode[]) => {
-        if (!editor) return;
-        const wrapper = editor.getWrapper();
-        if (!wrapper) return;
-        const components = nodes.map(nodeToComponent);
-        wrapper.components().reset(components);
-        syncCanvasSchema(editor);
-    }, [editor, syncCanvasSchema]);
-
-    const handleInsertBlock = useCallback((payload: SidebarBlockItem | string) => {
-        if (!editor) return;
-        const fromSidebarItem = typeof payload !== 'string' ? payload : null;
-        const safeBlockId = typeof payload === 'string' ? payload.trim() : payload.id.trim();
-        if (!safeBlockId) return;
-
-        const block = editor.BlockManager.get(safeBlockId);
-        const content = fromSidebarItem?.content ?? block?.get('content');
-        if (!content) return;
-
-        const added = editor.addComponents(content as never);
-        const inserted = unwrapAddedComponent(added);
-        if (inserted) {
-            if (snapRef.current) applySnapForComponent(inserted);
-            selectComponent(editor, inserted);
-        }
-
-        syncCanvasSchema(editor);
-    }, [editor, syncCanvasSchema]);
-
-    const handleBlockDragStart = useCallback((item: SidebarBlockItem, event: DragEvent<HTMLButtonElement>) => {
-        draggedBlockRef.current = item;
-        draggedBlockIdRef.current = item.id;
-        event.dataTransfer.setData('application/x-drawcode-block', item.id);
-        event.dataTransfer.setData('text/plain', item.id);
-        event.dataTransfer.effectAllowed = 'copy';
-    }, []);
-
-    const handleCanvasDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
-        event.preventDefault();
-        event.dataTransfer.dropEffect = 'copy';
-    }, []);
-
-    const handleCanvasDrop = useCallback((event: DragEvent<HTMLDivElement>) => {
-        event.preventDefault();
-        const blockId =
-            event.dataTransfer.getData('application/x-drawcode-block')
-            || event.dataTransfer.getData('text/plain')
-            || draggedBlockIdRef.current;
-        const draggedItem = draggedBlockRef.current;
-        if (!blockId) return;
-        if (draggedItem && draggedItem.id === blockId) {
-            handleInsertBlock(draggedItem);
-        } else {
-            const fallbackItem = sidebarBlocks.find((item) => item.id === blockId);
-            if (fallbackItem) handleInsertBlock(fallbackItem);
-            else handleInsertBlock(blockId);
-        }
-        draggedBlockRef.current = null;
-        draggedBlockIdRef.current = null;
-    }, [handleInsertBlock, sidebarBlocks]);
-
-    useEffect(() => {
-        if (!editor) return;
-        const canvasDoc = editor.Canvas.getDocument();
-        if (!canvasDoc) return;
-
-        const onDragOver = (event: globalThis.DragEvent) => {
-            event.preventDefault();
-            if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
-        };
-
-        const onDrop = (event: globalThis.DragEvent) => {
-            event.preventDefault();
-            const droppedId =
-                event.dataTransfer?.getData('application/x-drawcode-block')
-                || event.dataTransfer?.getData('text/plain')
-                || draggedBlockIdRef.current;
-            if (!droppedId) return;
-
-            const draggedItem = draggedBlockRef.current;
-            if (draggedItem && draggedItem.id === droppedId) {
-                handleInsertBlock(draggedItem);
-            } else {
-                const fallbackItem = sidebarBlocks.find((item) => item.id === droppedId);
-                if (fallbackItem) handleInsertBlock(fallbackItem);
-                else handleInsertBlock(droppedId);
-            }
-
-            draggedBlockRef.current = null;
-            draggedBlockIdRef.current = null;
-        };
-
-        canvasDoc.addEventListener('dragover', onDragOver);
-        canvasDoc.addEventListener('drop', onDrop);
-
-        return () => {
-            canvasDoc.removeEventListener('dragover', onDragOver);
-            canvasDoc.removeEventListener('drop', onDrop);
-        };
-    }, [editor, handleInsertBlock, sidebarBlocks]);
-
-    const handleImportFile = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-
-        try {
-            const text = await file.text();
-            const parsed = JSON.parse(text) as unknown as { pages?: CanvasPage[]; activePageIndex?: number };
-            if (Array.isArray(parsed?.pages) && parsed.pages.length > 0) {
-                const safePages = parsed.pages.map((page, index) => ({
-                    id: page.id || `page-${index + 1}`,
-                    name: page.name || `Pagina ${index + 1}`,
-                    components: Array.isArray(page.components) ? page.components : [],
-                    styles: page.styles ?? [],
-                    schema: Array.isArray(page.schema) ? page.schema : [],
-                }));
-                const targetIndex = Math.max(0, Math.min(parsed.activePageIndex ?? 0, safePages.length - 1));
-                pagesRef.current = safePages;
-                setPages(safePages);
-                setActivePageIndex(targetIndex);
-                activePageIndexRef.current = targetIndex;
-                applyPageToCanvas(safePages[targetIndex] as CanvasPage);
-                setSaveMsg('JSON importado com sucesso.');
-            } else {
-                const nodes = extractImportedNodes(parsed);
-                if (!nodes.length) {
-                    setSaveMsg('JSON invalido para importacao.');
-                    return;
+            if (activeDrawTool === 'pencil') {
+                const lastPoint = drawStrokeRef.current.points[drawStrokeRef.current.points.length - 1];
+                const distance = Math.hypot(point.x - lastPoint.x, point.y - lastPoint.y);
+                if (distance >= 2) {
+                    drawStrokeRef.current.points.push(point);
                 }
-
-                importSchema(nodes);
-                const singlePage: CanvasPage = {
-                    id: 'page-1',
-                    name: 'Pagina 1',
-                    components: nodes.map(nodeToComponent),
-                    styles: editor?.getStyle() ?? [],
-                    schema: nodes,
-                };
-                pagesRef.current = [singlePage];
-                setPages([singlePage]);
-                setActivePageIndex(0);
-                activePageIndexRef.current = 0;
-                setSaveMsg('JSON importado com sucesso.');
-            }
-        } catch {
-            setSaveMsg('Falha ao importar JSON.');
-        } finally {
-            event.target.value = '';
-            setTimeout(() => setSaveMsg(''), 3000);
-        }
-    }, [importSchema, applyPageToCanvas, editor]);
-
-    const handleImageUpload = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file || !editor) return;
-
-        const selected = editor.getSelected() as unknown as AnyComponent | null;
-        if (!selected) {
-            setSaveMsg('Selecione uma imagem no canvas antes do upload.');
-            event.target.value = '';
-            return;
-        }
-
-        const tagName = String(selected.get('tagName') ?? '').toLowerCase();
-        const selectedType = inferTypeFromComponent(selected);
-        if (tagName !== 'img' && !selectedType.includes('image')) {
-            setSaveMsg('Selecione uma imagem no canvas antes do upload.');
-            event.target.value = '';
-            return;
-        }
-
-        const dataUrl = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(String(reader.result ?? ''));
-            reader.onerror = () => reject(new Error('Falha ao ler imagem'));
-            reader.readAsDataURL(file);
-        }).catch(() => '');
-
-        if (!dataUrl) {
-            setSaveMsg('Falha ao carregar imagem.');
-            event.target.value = '';
-            return;
-        }
-
-        const attrs = selected.getAttributes?.() ?? {};
-        selected.setAttributes({
-            ...attrs,
-            src: dataUrl,
-            alt: attrs.alt || file.name || 'Imagem',
-        });
-        syncCanvasSchema(editor);
-        setSaveMsg('Imagem atualizada.');
-        setTimeout(() => setSaveMsg(''), 2500);
-        event.target.value = '';
-    }, [editor, syncCanvasSchema]);
-
-    const handleSave = useCallback(async () => {
-        if (!editor || !userId) {
-            setSaveMsg('Faca login para salvar projetos.');
-            return;
-        }
-
-        setSaving(true);
-        setSaveMsg('');
-
-        try {
-            snapshotCurrentPage();
-            const schema = serializeCanvas(editor);
-            setCanvasStructure(schema);
-
-            const data = {
-                components: editor.getComponents(),
-                styles: editor.getStyle(),
-                html: editor.getHtml(),
-                css: editor.getCss(),
-                schema,
-                pages: pagesRef.current,
-                activePageIndex: activePageIndexRef.current,
-            };
-
-            const res = await fetch('/api/grape/save', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    projectId: currentProjectId,
-                    name: projectName,
-                    data,
-                }),
-            });
-
-            const result = await res.json();
-
-            if (!res.ok) {
-                setSaveMsg(`Erro: ${result.error}`);
             } else {
-                setCurrentProjectId(result.project.id);
-                setSaveMsg('Projeto salvo.');
-                setTimeout(() => setSaveMsg(''), 3000);
+                drawStrokeRef.current.points = [drawStrokeRef.current.start, point];
             }
-        } catch {
-            setSaveMsg('Erro de conexao.');
-        } finally {
-            setSaving(false);
-        }
-    }, [editor, userId, currentProjectId, projectName, snapshotCurrentPage]);
 
-    useEffect(() => {
-        const onKeyDown = (event: KeyboardEvent) => {
-            if (!editor || isInputElement(event.target)) return;
-            const isMeta = event.ctrlKey || event.metaKey;
-            const key = event.key.toLowerCase();
+            renderPreview(activeDrawTool, drawStrokeRef.current);
+        };
 
-            if (event.key === 'Delete') {
-                event.preventDefault();
-                handleDelete();
-                closeContextMenu();
+        const onMouseUp = (event: MouseEvent) => {
+            if (!drawStrokeRef.current) return;
+
+            const point = resolveCanvasPoint(event) ?? drawStrokeRef.current.points[drawStrokeRef.current.points.length - 1];
+            const currentStroke = drawStrokeRef.current;
+            drawStrokeRef.current = null;
+            clearPreviewElement(currentStroke);
+
+            if (activeDrawTool === 'line') {
+                consumeEvent(event);
+                insertLineAtPoints(currentStroke.start, point);
                 return;
             }
 
-            if (isMeta && key === 'd') {
-                event.preventDefault();
-                handleDuplicate();
-                closeContextMenu();
+            if (activeDrawTool === 'pencil') {
+                consumeEvent(event);
+                const nextPoints = [...currentStroke.points];
+                if (point) {
+                    nextPoints.push(point);
+                }
+                insertPencilStroke(nextPoints);
                 return;
             }
 
-            if (isMeta && !event.shiftKey && key === 'z') {
-                event.preventDefault();
-                handleUndo();
-                closeContextMenu();
-                return;
-            }
-
-            if (isMeta && (key === 'y' || (event.shiftKey && key === 'z'))) {
-                event.preventDefault();
-                handleRedo();
-                closeContextMenu();
-                return;
-            }
-
-            if (event.key === 'Escape') {
-                closeContextMenu();
+            if (activeDrawTool === 'square' || activeDrawTool === 'circle' || activeDrawTool === 'triangle') {
+                consumeEvent(event);
+                insertShapeAtPoints(activeDrawTool, currentStroke.start, point);
             }
         };
 
-        window.addEventListener('keydown', onKeyDown);
-        return () => window.removeEventListener('keydown', onKeyDown);
-    }, [editor, handleDelete, handleDuplicate, handleRedo, handleUndo, closeContextMenu]);
-
-    useEffect(() => {
-        if (!editor) return;
-
-        const canvasDoc = editor.Canvas.getDocument();
-        const frameEl = editor.Canvas.getFrameEl();
-        if (!canvasDoc || !frameEl) return;
-
-        const onContextMenu = (event: MouseEvent) => {
-            const selected = editor.getSelected();
-            if (!selected) return;
-
-            event.preventDefault();
-
-            const frameRect = frameEl.getBoundingClientRect();
-            const menuWidth = 210;
-            const menuHeight = 280;
-            const nextX = Math.min(frameRect.left + event.clientX, window.innerWidth - menuWidth);
-            const nextY = Math.min(frameRect.top + event.clientY, window.innerHeight - menuHeight);
-            setContextMenu({ open: true, x: Math.max(10, nextX), y: Math.max(10, nextY) });
-        };
-
-        const onAnyClick = () => closeContextMenu();
-        const onScroll = () => closeContextMenu();
-
-        canvasDoc.addEventListener('contextmenu', onContextMenu);
-        canvasDoc.addEventListener('mousedown', onAnyClick);
-        window.addEventListener('mousedown', onAnyClick);
-        window.addEventListener('resize', onAnyClick);
-        window.addEventListener('scroll', onScroll, true);
+        canvasDoc.addEventListener('mousedown', onMouseDown, true);
+        canvasDoc.addEventListener('mousemove', onMouseMove, true);
+        canvasDoc.addEventListener('mouseup', onMouseUp, true);
 
         return () => {
-            canvasDoc.removeEventListener('contextmenu', onContextMenu);
-            canvasDoc.removeEventListener('mousedown', onAnyClick);
-            window.removeEventListener('mousedown', onAnyClick);
-            window.removeEventListener('resize', onAnyClick);
-            window.removeEventListener('scroll', onScroll, true);
+            canvasDoc.removeEventListener('mousedown', onMouseDown, true);
+            canvasDoc.removeEventListener('mousemove', onMouseMove, true);
+            canvasDoc.removeEventListener('mouseup', onMouseUp, true);
+            clearPreviewElement(drawStrokeRef.current);
+            drawStrokeRef.current = null;
         };
-    }, [editor, closeContextMenu]);
+    }, [
+        editor,
+        drawModeActive,
+        activeDrawTool,
+        clearPreviewElement,
+        createPreviewElement,
+        resolveCanvasPoint,
+        insertBlockAtPoint,
+        insertShapeAtPoints,
+        insertLineAtPoints,
+        insertPencilStroke,
+        renderPreview,
+    ]);
 
+    // Setup event listeners
+    useEditorEventListeners(
+        editor,
+        canvasShellRef,
+        zoomRef,
+        spacePressedRef,
+        (x: number, y: number) => beginPan(x, y, panStartRef, setIsPanning),
+        (x: number, y: number) => movePan(x, y, panStartRef),
+        () => endPan(panStartRef, setIsPanning),
+        setCanvasZoom,
+    );
+
+    // Context menu
+    useContextMenuHandler(editor, setContextMenu, closeContextMenu);
+
+    // Keyboard shortcuts
+    useKeyboardShortcuts(
+        editor,
+        handleDelete,
+        handleDuplicate,
+        handleUndo,
+        handleRedo,
+        closeContextMenu,
+        activeDrawTool,
+        setLeftPanelMode,
+        setLeftSidebarCollapsed,
+        setActiveDrawTool,
+    );
+
+    // Dock items
     const dockItems: DockItemData[] = [
         { icon: <VscHome size={18} />, label: 'Dashboard', onClick: () => { window.location.href = '/dashboard'; } },
         { icon: <VscArchive size={18} />, label: 'Salvar', onClick: handleSave },
-        { icon: <VscAccount size={18} />, label: 'Exportar JSON', onClick: handleExportJson },
+        { icon: <VscAccount size={18} />, label: 'Exportar JSON', onClick: () => handleExportJson(pagesRef, activePageIndexRef, snapshotCurrentPage) },
         {
             icon: <VscSettingsGear size={18} />,
             label: 'Propriedades',
@@ -996,7 +952,7 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
                 type="file"
                 accept="application/json"
                 className="draw-hidden-input"
-                onChange={handleImportFile}
+                onChange={(e) => handleImportFile(e, pagesRef, activePageIndexRef, setPages, setActivePageIndex, applyPageToCanvas)}
             />
             <input
                 ref={imageInputRef}
@@ -1009,6 +965,7 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
             <BuilderToolbar
                 projectName={projectName}
                 saving={saving}
+                aiGenerating={aiGenerating}
                 canSave={Boolean(userId)}
                 canUseEditorActions={Boolean(editor)}
                 snapEnabled={snapEnabled}
@@ -1016,10 +973,13 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
                 hasUser={Boolean(userId)}
                 onProjectNameChange={(event) => setProjectName(event.target.value)}
                 onSave={handleSave}
-                onExportJson={handleExportJson}
+                onExportJson={() => handleExportJson(pagesRef, activePageIndexRef, snapshotCurrentPage)}
                 onImportJson={() => fileInputRef.current?.click()}
                 onUploadImage={() => imageInputRef.current?.click()}
-                onToggleSnap={() => setSnapEnabled((prev) => !prev)}
+                onToggleSnap={() => setSnapEnabled((prev: boolean) => !prev)}
+                onUndo={handleUndo}
+                onRedo={handleRedo}
+                onGenerateAi={handleGenerateAi}
             />
 
             <BuilderElementsSidebar
@@ -1027,12 +987,24 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
                 groupedSidebar={groupedSidebar}
                 activeGroup={activeGroup}
                 canvasElementsCount={canvasStructure.length}
+                aiOutput={aiOutput}
                 propertiesActive={leftPanelMode === 'properties'}
+                drawActive={leftPanelMode === 'draw'}
+                activeDrawTool={activeDrawTool}
                 onCollapse={() => setLeftSidebarCollapsed(true)}
                 onSelectGroup={(groupId) => {
                     setActiveGroupId(groupId);
                     setLeftSidebarCollapsed(false);
                     setLeftPanelMode('elements');
+                }}
+                onToggleDraw={() => {
+                    setLeftSidebarCollapsed(false);
+                    setLeftPanelMode('draw');
+                }}
+                onSelectDrawTool={(toolId) => {
+                    setLeftSidebarCollapsed(false);
+                    setLeftPanelMode('draw');
+                    setActiveDrawTool(toolId);
                 }}
                 onToggleProperties={() => {
                     setLeftSidebarCollapsed(false);
@@ -1052,9 +1024,16 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
                 onCanvasDragOver={handleCanvasDragOver}
                 onCanvasDrop={handleCanvasDrop}
                 onZoomSliderChange={handleZoomSliderChange}
-                onZoomOut={handleZoomOut}
+                onZoomOut={() => handleZoomOut(zoomLevel)}
                 onZoomReset={handleZoomReset}
-                onZoomIn={handleZoomIn}
+                onZoomIn={() => handleZoomIn(zoomLevel)}
+                pages={pages}
+                activePageIndex={activePageIndex}
+                onCreatePage={handleCreatePage}
+                onSelectPage={handleSelectPage}
+                aiGenerating={aiGenerating}
+                aiPreview={aiPreview}
+                onCloseAiPreview={() => setAiPreview(null)}
             />
 
             <BuilderContextMenu
@@ -1071,6 +1050,4 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
         </div>
     );
 }
-
-
 

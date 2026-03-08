@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { z } from 'zod';
 
 // Mock do Prisma
 vi.mock('@/lib/prisma', () => ({
@@ -71,7 +72,6 @@ describe('POST /api/auth/register', () => {
     });
 
     it('deve rejeitar senha fraca (sem maiúscula)', () => {
-        const { z } = require('zod');
         const schema = z.object({
             name: z.string().min(2),
             email: z.string().email(),
@@ -87,7 +87,6 @@ describe('POST /api/auth/register', () => {
     });
 
     it('deve aceitar senha forte', () => {
-        const { z } = require('zod');
         const schema = z.object({
             name: z.string().min(2),
             email: z.string().email(),

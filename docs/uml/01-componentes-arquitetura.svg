@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1380" height="780" viewBox="0 0 1380 780">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <polygon points="0,0 10,4 0,8" fill="#334155" />
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { font-family: Inter, Segoe UI, Arial, sans-serif; font-size: 20px; font-weight: 700; fill: #0f172a; }
+      .subtitle { font-family: Inter, Segoe UI, Arial, sans-serif; font-size: 12px; fill: #475569; }
+      .box { fill: #ffffff; stroke: #334155; stroke-width: 1.3; rx: 8; }
+      .boxHead { fill: #e2e8f0; stroke: #334155; stroke-width: 1.3; rx: 8; }
+      .boxTitle { font-family: Inter, Segoe UI, Arial, sans-serif; font-size: 13px; font-weight: 700; fill: #0f172a; }
+      .boxText { font-family: Inter, Segoe UI, Arial, sans-serif; font-size: 12px; fill: #1e293b; }
+      .edge { stroke: #334155; stroke-width: 1.2; fill: none; marker-end: url(#arrow); }
+      .edgeDashed { stroke: #334155; stroke-width: 1.2; fill: none; stroke-dasharray: 6 4; marker-end: url(#arrow); }
+      .edgeLabel { font-family: Inter, Segoe UI, Arial, sans-serif; font-size: 11px; fill: #0f172a; }
+      .lifeline { stroke: #64748b; stroke-width: 1.2; stroke-dasharray: 5 5; }
+      .actor { fill: #ffffff; stroke: #334155; stroke-width: 1.3; rx: 6; }
+      .note { fill: #fef3c7; stroke: #92400e; stroke-width: 1; rx: 6; }
+      .usecase { fill: #ffffff; stroke: #334155; stroke-width: 1.2; }
+    </style>
+  </defs>
+  <rect class="bg" x="0" y="0" width="1380" height="780" />
+  <text class="title" x="24" y="34">UML - Diagrama de Componentes (Arquitetura Geral)</text>
+
+<rect class="note" x="70" y="680" width="1240" height="58" />
+<text class="boxText" x="78" y="698">Resumo: Frontend Next.js usa API Routes e NextAuth; persistencia via Prisma em PostgreSQL; editor GrapeJS salva projetos JSON.</text>
+<rect class="box" x="70" y="120" width="220" height="90" />
+<rect class="boxHead" x="70" y="120" width="220" height="26" />
+<text class="boxTitle" x="78" y="137">Browser/Usuario</text>
+<text class="boxText" x="80" y="162">UI Web</text>
+<text class="boxText" x="80" y="177">Interacao via React</text>
+<rect class="box" x="360" y="80" width="300" height="120" />
+<rect class="boxHead" x="360" y="80" width="300" height="26" />
+<text class="boxTitle" x="368" y="97">Next.js Frontend</text>
+<text class="boxText" x="370" y="122">App Router</text>
+<text class="boxText" x="370" y="137">Pages e Components</text>
+<text class="boxText" x="370" y="152">Modal/Login/Cadastro</text>
+<rect class="box" x="360" y="250" width="300" height="130" />
+<rect class="boxHead" x="360" y="250" width="300" height="26" />
+<text class="boxTitle" x="368" y="267">Modulo GrapeJS</text>
+<text class="boxText" x="370" y="292">WebBuilderScreen</text>
+<text class="boxText" x="370" y="307">builder-core + sidebars</text>
+<text class="boxText" x="370" y="322">canvas, blocos, estilos</text>
+<rect class="box" x="760" y="90" width="280" height="130" />
+<rect class="boxHead" x="760" y="90" width="280" height="26" />
+<text class="boxTitle" x="768" y="107">API Routes</text>
+<text class="boxText" x="770" y="132">/api/auth/register</text>
+<text class="boxText" x="770" y="147">/api/grape/save</text>
+<text class="boxText" x="770" y="162">/api/users/me</text>
+<rect class="box" x="760" y="280" width="280" height="90" />
+<rect class="boxHead" x="760" y="280" width="280" height="26" />
+<text class="boxTitle" x="768" y="297">NextAuth</text>
+<text class="boxText" x="770" y="322">Credentials + OAuth</text>
+<text class="boxText" x="770" y="337">JWT/session callbacks</text>
+<rect class="box" x="1110" y="110" width="220" height="90" />
+<rect class="boxHead" x="1110" y="110" width="220" height="26" />
+<text class="boxTitle" x="1118" y="127">Prisma ORM</text>
+<text class="boxText" x="1120" y="152">Modelos e queries</text>
+<rect class="box" x="1110" y="300" width="220" height="90" />
+<rect class="boxHead" x="1110" y="300" width="220" height="26" />
+<text class="boxTitle" x="1118" y="317">PostgreSQL</text>
+<text class="boxText" x="1120" y="342">users, accounts, sessions</text>
+<text class="boxText" x="1120" y="357">grape_projects</text>
+<line class="edge" x1="290" y1="150" x2="360" y2="135" />
+<text class="edgeLabel" x="325" y="136.5">navega/consome UI</text>
+<line class="edge" x1="290" y1="180" x2="360" y2="300" />
+<text class="edgeLabel" x="305" y="240">abre editor visual</text>
+<line class="edge" x1="660" y1="130" x2="760" y2="140" />
+<text class="edgeLabel" x="710" y="129">fetch/POST/GET</text>
+<line class="edge" x1="660" y1="300" x2="760" y2="310" />
+<text class="edgeLabel" x="710" y="299">salvar/listar projetos</text>
+<line class="edge" x1="900" y1="220" x2="900" y2="280" />
+<text class="edgeLabel" x="910" y="255">auth() / sessao</text>
+<line class="edge" x1="1040" y1="140" x2="1110" y2="145" />
+<text class="edgeLabel" x="1075" y="136.5">acesso a dados</text>
+<line class="edge" x1="1040" y1="315" x2="1110" y2="340" />
+<text class="edgeLabel" x="1075" y="321.5">adapter auth</text>
+<line class="edge" x1="1220" y1="200" x2="1220" y2="300" />
+<text class="edgeLabel" x="1230" y="255">SQL</text>
+</svg>

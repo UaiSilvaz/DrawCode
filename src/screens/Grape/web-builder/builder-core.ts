@@ -66,6 +66,39 @@ export interface CanvasPage {
     schema: CanvasElementNode[];
 }
 
+export interface WrapperElementSnapshot {
+    id: string;
+    tagName: string;
+    type: string;
+    text: string;
+    html: string;
+    position: { x: number; y: number };
+    size: { width: number; height: number };
+    style: {
+        display: string;
+        position: string;
+        backgroundColor: string;
+        color: string;
+        fontSize: string;
+        fontWeight: string;
+        borderRadius: string;
+        borderWidth: string;
+        borderColor: string;
+        borderStyle: string;
+        opacity: string;
+        boxShadow: string;
+        transform: string;
+        zIndex: string;
+    };
+    attributes: Record<string, string>;
+    children: WrapperElementSnapshot[];
+}
+
+export interface WrapperBoundsSnapshot {
+    width: number;
+    height: number;
+}
+
 export const GRID_STEP = 8;
 export const PAGE_WIDTH = 1320;
 export const PAGE_HEIGHT = 860;

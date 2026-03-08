@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="860" viewBox="0 0 1400 860">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <polygon points="0,0 10,4 0,8" fill="#334155" />
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { font-family: Inter, Segoe UI, Arial, sans-serif; font-size: 20px; font-weight: 700; fill: #0f172a; }
+      .subtitle { font-family: Inter, Segoe UI, Arial, sans-serif; font-size: 12px; fill: #475569; }
+      .box { fill: #ffffff; stroke: #334155; stroke-width: 1.3; rx: 8; }
+      .boxHead { fill: #e2e8f0; stroke: #334155; stroke-width: 1.3; rx: 8; }
+      .boxTitle { font-family: Inter, Segoe UI, Arial, sans-serif; font-size: 13px; font-weight: 700; fill: #0f172a; }
+      .boxText { font-family: Inter, Segoe UI, Arial, sans-serif; font-size: 12px; fill: #1e293b; }
+      .edge { stroke: #334155; stroke-width: 1.2; fill: none; marker-end: url(#arrow); }
+      .edgeDashed { stroke: #334155; stroke-width: 1.2; fill: none; stroke-dasharray: 6 4; marker-end: url(#arrow); }
+      .edgeLabel { font-family: Inter, Segoe UI, Arial, sans-serif; font-size: 11px; fill: #0f172a; }
+      .lifeline { stroke: #64748b; stroke-width: 1.2; stroke-dasharray: 5 5; }
+      .actor { fill: #ffffff; stroke: #334155; stroke-width: 1.3; rx: 6; }
+      .note { fill: #fef3c7; stroke: #92400e; stroke-width: 1; rx: 6; }
+      .usecase { fill: #ffffff; stroke: #334155; stroke-width: 1.2; }
+    </style>
+  </defs>
+  <rect class="bg" x="0" y="0" width="1400" height="860" />
+  <text class="title" x="24" y="34">UML - Diagrama de Classes de Dominio (Prisma)</text>
+
+<rect class="note" x="80" y="760" width="1260" height="60" />
+<text class="boxText" x="88" y="778">Mapeamento: User eh entidade central; Account/Session suportam NextAuth; GrapeProject armazena JSON do editor por usuario.</text>
+<rect class="box" x="80" y="90" width="340" height="290" />
+<rect class="boxHead" x="80" y="90" width="340" height="26" />
+<text class="boxTitle" x="88" y="107">User</text>
+<text class="boxText" x="90" y="132">+id: String (PK)</text>
+<text class="boxText" x="90" y="147">+name: String?</text>
+<text class="boxText" x="90" y="162">+email: String (unique)</text>
+<text class="boxText" x="90" y="177">+password: String?</text>
+<text class="boxText" x="90" y="192">+role: Role</text>
+<text class="boxText" x="90" y="207">+createdAt: DateTime</text>
+<text class="boxText" x="90" y="222">+updatedAt: DateTime</text>
+<text class="boxText" x="90" y="237">accounts: Account[]</text>
+<text class="boxText" x="90" y="252">sessions: Session[]</text>
+<text class="boxText" x="90" y="267">grapeProjects: GrapeProject[]</text>
+<rect class="box" x="500" y="110" width="320" height="210" />
+<rect class="boxHead" x="500" y="110" width="320" height="26" />
+<text class="boxTitle" x="508" y="127">Account</text>
+<text class="boxText" x="510" y="152">+id: String (PK)</text>
+<text class="boxText" x="510" y="167">+userId: String (FK)</text>
+<text class="boxText" x="510" y="182">+provider: String</text>
+<text class="boxText" x="510" y="197">+providerAccountId: String</text>
+<text class="boxText" x="510" y="212">+access_token: String?</text>
+<text class="boxText" x="510" y="227">+refresh_token: String?</text>
+<rect class="box" x="500" y="360" width="320" height="170" />
+<rect class="boxHead" x="500" y="360" width="320" height="26" />
+<text class="boxTitle" x="508" y="377">Session</text>
+<text class="boxText" x="510" y="402">+id: String (PK)</text>
+<text class="boxText" x="510" y="417">+sessionToken: String (unique)</text>
+<text class="boxText" x="510" y="432">+userId: String (FK)</text>
+<text class="boxText" x="510" y="447">+expires: DateTime</text>
+<rect class="box" x="900" y="120" width="360" height="170" />
+<rect class="boxHead" x="900" y="120" width="360" height="26" />
+<text class="boxTitle" x="908" y="137">VerificationToken</text>
+<text class="boxText" x="910" y="162">+identifier: String</text>
+<text class="boxText" x="910" y="177">+token: String (unique)</text>
+<text class="boxText" x="910" y="192">+expires: DateTime</text>
+<text class="boxText" x="910" y="207">unique(identifier, token)</text>
+<rect class="box" x="900" y="360" width="360" height="220" />
+<rect class="boxHead" x="900" y="360" width="360" height="26" />
+<text class="boxTitle" x="908" y="377">GrapeProject</text>
+<text class="boxText" x="910" y="402">+id: String (PK)</text>
+<text class="boxText" x="910" y="417">+userId: String (FK)</text>
+<text class="boxText" x="910" y="432">+name: String</text>
+<text class="boxText" x="910" y="447">+data: Json</text>
+<text class="boxText" x="910" y="462">+createdAt: DateTime</text>
+<text class="boxText" x="910" y="477">+updatedAt: DateTime</text>
+<rect class="box" x="80" y="430" width="220" height="110" />
+<rect class="boxHead" x="80" y="430" width="220" height="26" />
+<text class="boxTitle" x="88" y="447">Role &lt;&lt;enum&gt;&gt;</text>
+<text class="boxText" x="90" y="472">USER</text>
+<text class="boxText" x="90" y="487">ADMIN</text>
+<line class="edge" x1="420" y1="190" x2="500" y2="180" />
+<text class="edgeLabel" x="460" y="179">1 ---- *</text>
+<line class="edge" x1="420" y1="300" x2="500" y2="420" />
+<text class="edgeLabel" x="440" y="365">1 ---- *</text>
+<line class="edge" x1="420" y1="320" x2="900" y2="470" />
+<text class="edgeLabel" x="650" y="395">1 ---- *</text>
+<line class="edgeDashed" x1="220" y1="380" x2="190" y2="430" />
+<text class="edgeLabel" x="100" y="410">atributo role</text>
+<line class="edge" x1="820" y1="180" x2="900" y2="180" />
+<text class="edgeLabel" x="860" y="174">Auth flow</text>
+</svg>

@@ -1,0 +1,81 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900">
+  <defs>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { font-family: "Segoe UI", Arial, sans-serif; font-size: 30px; font-weight: 700; fill: #0f172a; }
+      .subtitle { font-family: "Segoe UI", Arial, sans-serif; font-size: 16px; fill: #334155; }
+      .system { fill: #ffffff; stroke: #0f172a; stroke-width: 2; }
+      .system-label { font-family: "Segoe UI", Arial, sans-serif; font-size: 22px; font-weight: 700; fill: #0f172a; }
+      .uc { fill: #ffffff; stroke: #1e293b; stroke-width: 1.8; }
+      .uc-text { font-family: "Segoe UI", Arial, sans-serif; font-size: 16px; fill: #0f172a; text-anchor: middle; dominant-baseline: middle; }
+      .actor-line { stroke: #0f172a; stroke-width: 3; stroke-linecap: round; }
+      .actor-head { fill: #ffffff; stroke: #0f172a; stroke-width: 3; }
+      .actor-name { font-family: "Segoe UI", Arial, sans-serif; font-size: 18px; font-weight: 600; fill: #0f172a; text-anchor: middle; }
+      .assoc { stroke: #334155; stroke-width: 2; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1400" height="900"/>
+
+  <text class="title" x="700" y="55" text-anchor="middle">Diagrama de Casos de Uso - DrawCode</text>
+  <text class="subtitle" x="700" y="85" text-anchor="middle">Principais funcionalidades para o TCC</text>
+
+  <rect class="system" x="310" y="120" width="860" height="730"/>
+  <text class="system-label" x="740" y="160" text-anchor="middle">Sistema DrawCode</text>
+
+  <ellipse class="uc" cx="740" cy="235" rx="215" ry="38"/>
+  <text class="uc-text" x="740" y="235">Visualizar pagina inicial</text>
+
+  <ellipse class="uc" cx="740" cy="325" rx="190" ry="38"/>
+  <text class="uc-text" x="740" y="325">Cadastrar conta</text>
+
+  <ellipse class="uc" cx="740" cy="415" rx="170" ry="38"/>
+  <text class="uc-text" x="740" y="415">Fazer login</text>
+
+  <ellipse class="uc" cx="740" cy="530" rx="205" ry="38"/>
+  <text class="uc-text" x="740" y="530">Gerenciar projetos</text>
+
+  <ellipse class="uc" cx="740" cy="620" rx="240" ry="38"/>
+  <text class="uc-text" x="740" y="620">Editar layout no web builder</text>
+
+  <ellipse class="uc" cx="740" cy="710" rx="180" ry="38"/>
+  <text class="uc-text" x="740" y="710">Salvar projeto</text>
+
+  <g>
+    <circle class="actor-head" cx="120" cy="240" r="23"/>
+    <line class="actor-line" x1="120" y1="263" x2="120" y2="330"/>
+    <line class="actor-line" x1="85" y1="285" x2="155" y2="285"/>
+    <line class="actor-line" x1="120" y1="330" x2="90" y2="377"/>
+    <line class="actor-line" x1="120" y1="330" x2="150" y2="377"/>
+    <text class="actor-name" x="120" y="410">Visitante</text>
+  </g>
+
+  <g>
+    <circle class="actor-head" cx="120" cy="560" r="23"/>
+    <line class="actor-line" x1="120" y1="583" x2="120" y2="650"/>
+    <line class="actor-line" x1="85" y1="605" x2="155" y2="605"/>
+    <line class="actor-line" x1="120" y1="650" x2="90" y2="697"/>
+    <line class="actor-line" x1="120" y1="650" x2="150" y2="697"/>
+    <text class="actor-name" x="120" y="730">Usuario autenticado</text>
+  </g>
+
+  <g>
+    <circle class="actor-head" cx="1280" cy="415" r="23"/>
+    <line class="actor-line" x1="1280" y1="438" x2="1280" y2="505"/>
+    <line class="actor-line" x1="1245" y1="460" x2="1315" y2="460"/>
+    <line class="actor-line" x1="1280" y1="505" x2="1250" y2="552"/>
+    <line class="actor-line" x1="1280" y1="505" x2="1310" y2="552"/>
+    <text class="actor-name" x="1280" y="585">Provedor OAuth</text>
+  </g>
+
+  <line class="assoc" x1="155" y1="282" x2="525" y2="235"/>
+  <line class="assoc" x1="155" y1="292" x2="550" y2="325"/>
+  <line class="assoc" x1="155" y1="302" x2="570" y2="415"/>
+
+  <line class="assoc" x1="155" y1="602" x2="535" y2="530"/>
+  <line class="assoc" x1="155" y1="615" x2="500" y2="620"/>
+  <line class="assoc" x1="155" y1="628" x2="560" y2="710"/>
+
+  <line class="assoc" x1="1257" y1="415" x2="910" y2="415"/>
+</svg>

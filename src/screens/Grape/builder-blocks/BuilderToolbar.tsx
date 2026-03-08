@@ -1,9 +1,11 @@
 import Image from 'next/image';
 import type { ChangeEvent } from 'react';
+import { Redo2, Sparkles, Undo2 } from 'lucide-react';
 
 interface BuilderToolbarProps {
     projectName: string;
     saving: boolean;
+    aiGenerating: boolean;
     canSave: boolean;
     canUseEditorActions: boolean;
     snapEnabled: boolean;
@@ -15,11 +17,15 @@ interface BuilderToolbarProps {
     onImportJson: () => void;
     onUploadImage: () => void;
     onToggleSnap: () => void;
+    onUndo: () => void;
+    onRedo: () => void;
+    onGenerateAi?: () => void;
 }
 
 export default function BuilderToolbar({
     projectName,
     saving,
+    aiGenerating,
     canSave,
     canUseEditorActions,
     snapEnabled,
@@ -31,6 +37,9 @@ export default function BuilderToolbar({
     onImportJson,
     onUploadImage,
     onToggleSnap,
+    onUndo,
+    onRedo,
+    onGenerateAi,
 }: BuilderToolbarProps) {
     return (
         <header className="draw-toolbar">
@@ -63,6 +72,18 @@ export default function BuilderToolbar({
                 >
                     Snap {snapEnabled ? 'ON' : 'OFF'}
                 </button>
+                <div className="draw-toolbar-actions">
+                    <button className="draw-btn draw-btn-icon" onClick={onUndo} disabled={!canUseEditorActions} aria-label="Desfazer">
+                        <Undo2 size={16} />
+                    </button>
+                    <button className="draw-btn draw-btn-icon" onClick={onRedo} disabled={!canUseEditorActions} aria-label="Refazer">
+                        <Redo2 size={16} />
+                    </button>
+                    <button className="draw-btn draw-btn-ai" onClick={onGenerateAi} disabled={aiGenerating}>
+                        <Sparkles size={16} />
+                        <span>{aiGenerating ? 'Gerando site...' : 'Gerar com IA'}</span>
+                    </button>
+                </div>
             </div>
             <div className="draw-toolbar-right">
                 <span className="draw-shortcut-tip">Clique direito no elemento para acoes</span>
