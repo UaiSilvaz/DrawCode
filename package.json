@@ -4,9 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build":  "prisma generate && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "node prisma/seed-run.js",
+    "test": "vitest run"
+    
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.41",
@@ -19,7 +24,6 @@
     "@prisma/client": "^5.22.0",
     "@react-three/fiber": "^9.5.0",
     "@types/bcryptjs": "^2.4.6",
-    "@types/nodemailer": "^7.0.11",
     "ai": "^6.0.116",
     "autoprefixer": "^10.4.24",
     "bcryptjs": "^3.0.3",
@@ -37,7 +41,6 @@
     "motion": "^12.24.11",
     "next": "16.1.1",
     "next-auth": "^5.0.0-beta.30",
-    "nodemailer": "^8.0.1",
     "pg": "^8.19.0",
     "postcss": "^8.5.6",
     "prisma": "^5.22.0",
