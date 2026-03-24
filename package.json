@@ -5,10 +5,12 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && node scripts/sync-prisma-pnpm.js && next build",
+    "vercel-build": "prisma migrate deploy && prisma generate && node scripts/sync-prisma-pnpm.js && next build",
     "postinstall": "prisma generate && node scripts/sync-prisma-pnpm.js",
     "start": "next start",
     "lint": "eslint",
     "db:generate": "prisma generate && node scripts/sync-prisma-pnpm.js",
+    "db:deploy": "prisma migrate deploy",
     "db:migrate": "prisma migrate dev",
     "db:seed": "node prisma/seed-run.js",
     "test": "vitest run"
