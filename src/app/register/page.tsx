@@ -30,8 +30,20 @@ export default function RegisterPage() {
             }
 
             // Faz login automático após registro
-            await signIn('credentials', { email, password, redirect: false });
-            router.push('/dashboard');
+            const signInResult = await signIn('credentials', {
+                email,
+                password,
+                redirect: false,
+                callbackUrl: '/dashboard',
+            });
+
+            if (signInResult?.error) {
+                setError('Conta criada, mas o login automático falhou. Entre com seu email e senha.');
+                return;
+            }
+
+            router.replace(signInResult?.url ?? '/dashboard');
+            router.refresh();
         } catch {
             setError('Erro de conexão. Tente novamente.');
         } finally {

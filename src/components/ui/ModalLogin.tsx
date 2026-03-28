@@ -78,9 +78,21 @@ export default function ModalLogin({ open, onClose, initialMode = "login", callb
             }
 
             // Faz login automático após registro
-            await signIn('credentials', { email, password, redirect: false });
+            const signInResult = await signIn('credentials', {
+                email,
+                password,
+                redirect: false,
+                callbackUrl,
+            });
+
+            if (signInResult?.error) {
+                setError('Conta criada, mas o login automático falhou. Entre com seu email e senha.');
+                return;
+            }
+
             handleClose();
-            router.push(callbackUrl);
+            router.replace(signInResult?.url ?? callbackUrl);
+            router.refresh();
         } catch {
             setError('Erro de conexão. Tente novamente.');
         } finally {
