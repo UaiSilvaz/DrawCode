@@ -6,7 +6,12 @@ import TargetCursor from './TargetCursor';
 export default function ConditionalTargetCursor() {
     const pathname = usePathname();
 
-    if (pathname === '/grape' || pathname?.startsWith('/grape/')) {
+    if (
+        pathname === '/grape' ||
+        pathname?.startsWith('/grape/') ||
+        pathname === '/dashboard' ||
+        pathname?.startsWith('/dashboard/')
+    ) {
         return null;
     }
 

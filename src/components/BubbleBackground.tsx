@@ -92,21 +92,28 @@ export function BubbleBackground({
         const container = containerRef.current
         if (!container) return
 
-        const resizeObserver = new ResizeObserver(updateCenter)
-        resizeObserver.observe(container)
+        const resizeObserver =
+            typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateCenter) : null
+        resizeObserver?.observe(container)
         window.addEventListener("resize", updateCenter, { passive: true })
         return () => {
-            resizeObserver.disconnect()
+            resizeObserver?.disconnect()
             window.removeEventListener("resize", updateCenter)
         }
     }, [updateCenter])
 
     useEffect(() => {
+        if (typeof window.matchMedia !== "function") return
         const mediaQuery = window.matchMedia("(max-width: 768px)")
         const syncMode = () => setIsCompactMode(mediaQuery.matches)
         syncMode()
-        mediaQuery.addEventListener("change", syncMode)
-        return () => mediaQuery.removeEventListener("change", syncMode)
+        if (typeof mediaQuery.addEventListener === "function") {
+            mediaQuery.addEventListener("change", syncMode)
+            return () => mediaQuery.removeEventListener("change", syncMode)
+        }
+
+        mediaQuery.addListener(syncMode)
+        return () => mediaQuery.removeListener(syncMode)
     }, [])
 
     useEffect(() => {
