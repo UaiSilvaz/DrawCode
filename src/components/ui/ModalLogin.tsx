@@ -38,13 +38,15 @@ export default function ModalLogin({ open, onClose, initialMode = "login", callb
             email,
             password,
             redirect: false,
+            callbackUrl,
         });
         setLoading(false);
         if (res?.error) {
             setError('Email ou senha incorretos.');
         } else {
             handleClose();
-            router.push(callbackUrl);
+            router.replace(res?.url ?? callbackUrl);
+            router.refresh();
         }
     };
 

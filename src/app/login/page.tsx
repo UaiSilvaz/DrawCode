@@ -17,12 +17,14 @@ export default function LoginPage() {
             email,
             password,
             redirect: false,
+            callbackUrl: '/dashboard',
         });
         setLoading(false);
         if (res?.error) {
             setError('Email ou senha incorretos.');
         } else {
-            router.push('/dashboard');
+            router.replace(res?.url ?? '/dashboard');
+            router.refresh();
         }
     };
 
