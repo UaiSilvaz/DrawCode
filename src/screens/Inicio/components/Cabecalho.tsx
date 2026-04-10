@@ -152,7 +152,7 @@ export default function Cabecalho() {
                             {[
                                 { label: "Inicio", id: "home" },
                                 { label: "Funções", id: "features" },
-                                { label: "Preços", id: "pricing" },
+                                { label: "Time", id: "founders" },
                                 { label: "Depoimentos", id: "testimonials" },
                                 { label: "Contato", id: "contact" }
                             ].map(
