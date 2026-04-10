@@ -1,12 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import CadastroScreen from '@/screens/Cadastro';
 
 export default function RegisterPage() {
-    const router = useRouter();
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -42,8 +40,7 @@ export default function RegisterPage() {
                 return;
             }
 
-            router.replace(signInResult?.url ?? '/dashboard');
-            router.refresh();
+            window.location.assign(signInResult?.url ?? '/dashboard');
         } catch {
             setError('Erro de conexão. Tente novamente.');
         } finally {

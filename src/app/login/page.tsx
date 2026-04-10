@@ -2,11 +2,9 @@
 
 import { signIn } from 'next-auth/react';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import LoginScreen from '@/screens/Login';
 
 export default function LoginPage() {
-    const router = useRouter();
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -23,8 +21,7 @@ export default function LoginPage() {
         if (res?.error) {
             setError('Email ou senha incorretos.');
         } else {
-            router.replace(res?.url ?? '/dashboard');
-            router.refresh();
+            window.location.assign(res?.url ?? '/dashboard');
         }
     };
 

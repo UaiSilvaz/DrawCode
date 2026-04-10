@@ -5,7 +5,6 @@ import Login from "@/screens/Login";
 import Cadastro from "@/screens/Cadastro";
 import "./modal.css";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 
 type ModalLoginProps = {
     open: boolean;
@@ -20,7 +19,6 @@ export default function ModalLogin({ open, onClose, initialMode = "login", callb
     const [loading, setLoading] = useState(false);
     const prevOpenRef = useRef(open);
     const [, startTransition] = useTransition();
-    const router = useRouter();
 
     useEffect(() => {
         if (open && !prevOpenRef.current) {
@@ -45,8 +43,7 @@ export default function ModalLogin({ open, onClose, initialMode = "login", callb
             setError('Email ou senha incorretos.');
         } else {
             handleClose();
-            router.replace(res?.url ?? callbackUrl);
-            router.refresh();
+            window.location.assign(res?.url ?? callbackUrl);
         }
     };
 
@@ -93,8 +90,7 @@ export default function ModalLogin({ open, onClose, initialMode = "login", callb
             }
 
             handleClose();
-            router.replace(signInResult?.url ?? callbackUrl);
-            router.refresh();
+            window.location.assign(signInResult?.url ?? callbackUrl);
         } catch {
             setError('Erro de conexão. Tente novamente.');
         } finally {
