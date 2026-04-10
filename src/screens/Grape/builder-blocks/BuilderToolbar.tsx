@@ -41,6 +41,12 @@ export default function BuilderToolbar({
     onRedo,
     onGenerateAi,
 }: BuilderToolbarProps) {
+    const statusTone = saveMsg.startsWith('Erro') || saveMsg.startsWith('Falha')
+        ? 'is-error'
+        : saveMsg
+            ? 'is-success'
+            : '';
+
     return (
         <header className="draw-toolbar">
             <div className="draw-toolbar-left">
@@ -85,10 +91,10 @@ export default function BuilderToolbar({
                     </button>
                 </div>
             </div>
-            <div className="draw-toolbar-right">
-                <span className="draw-shortcut-tip">Clique direito no elemento para acoes</span>
-                {saveMsg && <span className="draw-status">{saveMsg}</span>}
-                {!hasUser && <span className="draw-warning">Modo anonimo: salvamento desativado</span>}
+            <div className="draw-toolbar-right" />
+            <div className="draw-toolbar-toasts" aria-live="polite">
+                {saveMsg && <span className={`draw-toast ${statusTone}`}>{saveMsg}</span>}
+                {!hasUser && <span className="draw-toast is-warning">Modo anonimo: salvamento desativado</span>}
             </div>
         </header>
     );

@@ -698,7 +698,7 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
 
         setAiGenerating(true);
         setAiPreview(null);
-        setSaveMsg('Gerando analise com IA...');
+        setSaveMsg('');
 
         try {
             const { canvasDocumentHtml, canvasBodyHtml, wrapperHtml, wrapperBounds, wrapperElements } = captureCanvasSnapshot();
@@ -731,6 +731,7 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
             setLeftSidebarCollapsed(false);
             setLeftPanelMode('properties');
             setSaveMsg('Preview da IA gerado com sucesso.');
+            setTimeout(() => setSaveMsg(''), 2800);
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Falha ao gerar com IA.';
             setSaveMsg(message);
