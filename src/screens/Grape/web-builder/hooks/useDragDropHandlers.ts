@@ -36,20 +36,20 @@ export function useDragDropHandlers(
     draggedBlockRef.current = item;
     draggedBlockIdRef.current = item.id;
     event.dataTransfer.setData('application/x-drawcode-block', item.id);
-    event.dataTransfer.setData('text/plain', item.id);
     event.dataTransfer.effectAllowed = 'copy';
   }, [draggedBlockIdRef, draggedBlockRef]);
 
   const handleCanvasDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
+    event.stopPropagation();
     event.dataTransfer.dropEffect = 'copy';
   }, []);
 
   const handleCanvasDrop = useCallback((event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
+    event.stopPropagation();
     const blockId =
       event.dataTransfer.getData('application/x-drawcode-block') ||
-      event.dataTransfer.getData('text/plain') ||
       draggedBlockIdRef.current;
     const draggedItem = draggedBlockRef.current;
     if (!blockId) return;
@@ -73,14 +73,15 @@ export function useDragDropHandlers(
 
     const onDragOver = (event: globalThis.DragEvent) => {
       event.preventDefault();
+      event.stopPropagation();
       if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
     };
 
     const onDrop = (event: globalThis.DragEvent) => {
       event.preventDefault();
+      event.stopPropagation();
       const droppedId =
         event.dataTransfer?.getData('application/x-drawcode-block') ||
-        event.dataTransfer?.getData('text/plain') ||
         draggedBlockIdRef.current;
       if (!droppedId) return;
 
