@@ -26,23 +26,52 @@ interface BuilderCanvasAreaProps {
     onCloseAiPreview: () => void;
 }
 
+const buildPreviewSrcDoc = (bundle: { html: string; css: string; js: string }) => `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+        <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <style>
+                html, body { margin: 0; padding: 0; min-height: 100%; background: #ffffff; }
+                ${bundle.css}
+            </style>
+        </head>
+        <body>
+            ${bundle.html}
+            <script>
+                ${bundle.js}
+            </script>
+        </body>
+    </html>
+`.trim();
+
 function AIPreviewPanel({
     aiPreview,
     previewSrcDoc,
+    faithfulSrcDoc,
     onCloseAiPreview,
 }: {
     aiPreview: AIGenerationResult;
     previewSrcDoc: string;
+    faithfulSrcDoc: string;
     onCloseAiPreview: () => void;
 }) {
-    const [activePreviewTab, setActivePreviewTab] = useState<'preview' | 'html' | 'css' | 'js' | 'react' | 'backend'>('preview');
+    const [activePreviewTab, setActivePreviewTab] = useState<'preview' | 'react' | 'css' | 'html' | 'js' | 'semantic' | 'faithful' | 'backend'>('preview');
+    const semanticJson = JSON.stringify(aiPreview.semanticPage ?? {}, null, 2);
+    const generationLabel = aiPreview.generation.mode === 'openai'
+        ? `OpenAI${aiPreview.generation.model ? ` - ${aiPreview.generation.model}` : ''}`
+        : 'Fallback deterministico';
 
     return (
         <div className="draw-ai-preview-shell">
             <div className="draw-ai-preview-head">
                 <div className="draw-ai-preview-copy">
-                    <strong>Preview gerado com IA</strong>
+                    <strong>Site gerado com IA</strong>
                     <span>{aiPreview.summary}</span>
+                    <div className={`draw-ai-preview-badge ${aiPreview.generation.mode === 'openai' ? 'is-openai' : 'is-fallback'}`}>
+                        {generationLabel}
+                    </div>
                 </div>
                 <button type="button" className="draw-ai-preview-close" onClick={onCloseAiPreview}>
                     <X size={16} />
@@ -50,19 +79,21 @@ function AIPreviewPanel({
                 </button>
             </div>
             <div className="draw-ai-preview-tabs">
-                <button type="button" className={`draw-ai-preview-tab ${activePreviewTab === 'preview' ? 'is-active' : ''}`} onClick={() => setActivePreviewTab('preview')}>Preview</button>
-                <button type="button" className={`draw-ai-preview-tab ${activePreviewTab === 'html' ? 'is-active' : ''}`} onClick={() => setActivePreviewTab('html')}>HTML</button>
-                <button type="button" className={`draw-ai-preview-tab ${activePreviewTab === 'css' ? 'is-active' : ''}`} onClick={() => setActivePreviewTab('css')}>CSS</button>
-                <button type="button" className={`draw-ai-preview-tab ${activePreviewTab === 'js' ? 'is-active' : ''}`} onClick={() => setActivePreviewTab('js')}>JS</button>
+                <button type="button" className={`draw-ai-preview-tab ${activePreviewTab === 'preview' ? 'is-active' : ''}`} onClick={() => setActivePreviewTab('preview')}>Preview IA</button>
                 <button type="button" className={`draw-ai-preview-tab ${activePreviewTab === 'react' ? 'is-active' : ''}`} onClick={() => setActivePreviewTab('react')}>React</button>
+                <button type="button" className={`draw-ai-preview-tab ${activePreviewTab === 'css' ? 'is-active' : ''}`} onClick={() => setActivePreviewTab('css')}>CSS</button>
+                <button type="button" className={`draw-ai-preview-tab ${activePreviewTab === 'html' ? 'is-active' : ''}`} onClick={() => setActivePreviewTab('html')}>HTML</button>
+                <button type="button" className={`draw-ai-preview-tab ${activePreviewTab === 'js' ? 'is-active' : ''}`} onClick={() => setActivePreviewTab('js')}>JS</button>
+                <button type="button" className={`draw-ai-preview-tab ${activePreviewTab === 'semantic' ? 'is-active' : ''}`} onClick={() => setActivePreviewTab('semantic')}>Semantica</button>
+                <button type="button" className={`draw-ai-preview-tab ${activePreviewTab === 'faithful' ? 'is-active' : ''}`} onClick={() => setActivePreviewTab('faithful')}>Preview fiel</button>
                 <button type="button" className={`draw-ai-preview-tab ${activePreviewTab === 'backend' ? 'is-active' : ''}`} onClick={() => setActivePreviewTab('backend')}>Backend</button>
             </div>
             <div className="draw-ai-preview-body">
-                {activePreviewTab === 'preview' ? (
+                {activePreviewTab === 'preview' || activePreviewTab === 'faithful' ? (
                     <iframe
-                        title="Preview gerado com IA"
+                        title={activePreviewTab === 'preview' ? 'Preview gerado com IA' : 'Preview fiel do canvas'}
                         className="draw-ai-preview-frame"
-                        srcDoc={previewSrcDoc}
+                        srcDoc={activePreviewTab === 'preview' ? previewSrcDoc : faithfulSrcDoc}
                     />
                 ) : (
                     <pre className="draw-ai-preview-code">
@@ -70,6 +101,7 @@ function AIPreviewPanel({
                         {activePreviewTab === 'css' && aiPreview.code.css}
                         {activePreviewTab === 'js' && aiPreview.code.js}
                         {activePreviewTab === 'react' && aiPreview.code.react}
+                        {activePreviewTab === 'semantic' && semanticJson}
                         {activePreviewTab === 'backend' && aiPreview.code.backend}
                     </pre>
                 )}
@@ -102,27 +134,12 @@ export default function BuilderCanvasArea({
     const [pagesMenuOpen, setPagesMenuOpen] = useState(false);
     const previewSrcDoc = useMemo(() => {
         if (!aiPreview) return '';
-
-        return `
-            <!DOCTYPE html>
-            <html lang="pt-BR">
-                <head>
-                    <meta charset="utf-8" />
-                    <meta name="viewport" content="width=device-width, initial-scale=1" />
-                    <style>
-                        html, body { margin: 0; padding: 0; min-height: 100%; background: #ffffff; }
-                        ${aiPreview.preview.css}
-                    </style>
-                </head>
-                <body>
-                    ${aiPreview.preview.html}
-                    <script>
-                        ${aiPreview.preview.js}
-                    </script>
-                </body>
-            </html>
-        `.trim();
+        return buildPreviewSrcDoc(aiPreview.preview);
     }, [aiPreview]);
+    const faithfulSrcDoc = useMemo(() => {
+        if (!aiPreview?.faithfulPreview) return previewSrcDoc;
+        return buildPreviewSrcDoc(aiPreview.faithfulPreview);
+    }, [aiPreview, previewSrcDoc]);
 
     return (
         <main className="draw-canvas-main">
@@ -172,11 +189,19 @@ export default function BuilderCanvasArea({
                     <div className="draw-ai-stage">
                         {aiGenerating && (
                             <div className="draw-ai-loading">
+                                <div className="draw-ai-loading-grid" />
                                 <div className="draw-ai-loading-orbit" />
                                 <div className="draw-ai-loading-ring" />
                                 <div className="draw-ai-loading-text">
-                                    <strong>Gerando site</strong>
-                                    <span>A IA esta lendo o layout, interpretando os desenhos e montando um preview funcional.</span>
+                                    <small>DrawCode AI Agent</small>
+                                    <strong>Transformando canvas em site</strong>
+                                    <span>Estamos lendo o painel branco, interpretando componentes, validando a arvore semantica e montando React + CSS.</span>
+                                    <div className="draw-ai-loading-steps">
+                                        <span>Lendo layout</span>
+                                        <span>Interpretando riscos</span>
+                                        <span>Gerando React</span>
+                                        <span>Validando preview</span>
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -186,6 +211,7 @@ export default function BuilderCanvasArea({
                                 key={`${aiPreview.summary}-${aiPreview.interpretedSketch}`}
                                 aiPreview={aiPreview}
                                 previewSrcDoc={previewSrcDoc}
+                                faithfulSrcDoc={faithfulSrcDoc}
                                 onCloseAiPreview={onCloseAiPreview}
                             />
                         )}

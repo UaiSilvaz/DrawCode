@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { prisma } from '@/lib/prisma';
-import { hashPassword, createSafeUser } from '@/lib/auth-helpers';
+import { hashPassword, createSafeUser } from '@/lib/auth/helpers';
+import { prisma } from '@/lib/db/prisma';
 
 // ---- Rate Limit simples por IP (em memória) ----
 const rateLimitMap = new Map<string, { count: number; reset: number }>();

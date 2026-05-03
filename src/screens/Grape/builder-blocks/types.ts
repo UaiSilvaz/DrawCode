@@ -6,26 +6,9 @@ export interface ContextMenuState {
 
 export type LeftPanelMode = 'elements' | 'properties' | 'draw';
 export type DrawToolId = 'select' | 'pencil' | 'line' | 'square' | 'circle' | 'triangle' | 'text';
+export type { AIGenerationResult } from '@/lib/ai/types';
 
 export type SidebarIcon = 'layout' | 'shape' | 'component' | 'image' | 'text';
-
-export interface AIGenerationResult {
-    summary: string;
-    interpretedSketch: string;
-    preview: {
-        html: string;
-        css: string;
-        js: string;
-    };
-    code: {
-        html: string;
-        css: string;
-        js: string;
-        react: string;
-        backend: string;
-    };
-    recommendations: string[];
-}
 
 export interface SidebarGroup {
     id: string;

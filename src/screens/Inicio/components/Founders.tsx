@@ -1,10 +1,22 @@
 import TiltedCard from './TiltedCard';
 
 const founders = [
-  'Founder 1',
-  'Founder 2',
-  'Founder 3',
-  'Founder 4'
+  {
+    name: 'Guilherme',
+    imageSrc: '/GUILHERMEEE.jpg',
+  },
+  {
+    name: 'Júlia',
+    imageSrc: '/Julia.png',
+  },
+  {
+    name: 'Leandra',
+    imageSrc: '/LEANDRA.jpeg',
+  },
+  {
+    name: 'Antônio',
+    imageSrc: '/Antonio.jpeg',
+  },
 ];
 
 export default function Founders() {
@@ -21,12 +33,12 @@ export default function Founders() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 justify-items-center">
-          {founders.map((founderName) => (
+          {founders.map((founder) => (
             <TiltedCard
-              key={founderName}
-              imageSrc="/GUILHERMEEE.jpg"
-              altText={founderName}
-              captionText={founderName}
+              key={founder.name}
+              imageSrc={founder.imageSrc}
+              altText={founder.name}
+              captionText={founder.name}
               containerHeight="300px"
               containerWidth="300px"
               imageHeight="300px"
@@ -38,7 +50,7 @@ export default function Founders() {
               displayOverlayContent
               overlayContent={
                 <p className="text-white text-sm font-semibold bg-black/45 px-3 py-1 rounded-md m-3 inline-block">
-                  {founderName}
+                  {founder.name}
                 </p>
               }
             />

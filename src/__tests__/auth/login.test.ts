@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { Role } from '@prisma/client';
 
-vi.mock('@/lib/prisma', () => ({
+vi.mock('@/lib/db/prisma', () => ({
     prisma: {
         user: {
             findUnique: vi.fn(),
@@ -8,12 +9,12 @@ vi.mock('@/lib/prisma', () => ({
     },
 }));
 
-vi.mock('@/lib/auth-helpers', () => ({
+vi.mock('@/lib/auth/helpers', () => ({
     verifyPassword: vi.fn(),
 }));
 
-import { prisma } from '@/lib/prisma';
-import { verifyPassword } from '@/lib/auth-helpers';
+import { verifyPassword } from '@/lib/auth/helpers';
+import { prisma } from '@/lib/db/prisma';
 
 describe('Login via Credentials', () => {
     beforeEach(() => {
@@ -26,7 +27,7 @@ describe('Login via Credentials', () => {
             email: 'user@example.com',
             name: 'Usuário',
             password: '123456',
-            role: 'USER',
+            role: Role.USER,
             image: null,
             emailVerified: null,
             createdAt: new Date(),
@@ -49,7 +50,7 @@ describe('Login via Credentials', () => {
             email: 'user@example.com',
             name: 'Usuário',
             password: '$2b$12$hashed',
-            role: 'USER',
+            role: Role.USER,
             image: null,
             emailVerified: null,
             createdAt: new Date(),

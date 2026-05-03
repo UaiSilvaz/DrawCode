@@ -4,8 +4,8 @@ import Google from 'next-auth/providers/google';
 import Facebook from 'next-auth/providers/facebook';
 import Twitter from 'next-auth/providers/twitter';
 import Credentials from 'next-auth/providers/credentials';
-import { prisma } from '@/lib/prisma';
-import { verifyPassword } from '@/lib/auth-helpers';
+import { prisma } from '@/lib/db/prisma';
+import { verifyPassword } from './helpers';
 import { z } from 'zod';
 
 const credentialsSchema = z.object({

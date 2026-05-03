@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { z } from 'zod';
+import { Role } from '@prisma/client';
 
 // Mock do Prisma
-vi.mock('@/lib/prisma', () => ({
+vi.mock('@/lib/db/prisma', () => ({
     prisma: {
         user: {
             findUnique: vi.fn(),
@@ -11,13 +12,13 @@ vi.mock('@/lib/prisma', () => ({
     },
 }));
 
-vi.mock('@/lib/auth-helpers', () => ({
+vi.mock('@/lib/auth/helpers', () => ({
     hashPassword: vi.fn().mockResolvedValue('$2b$12$hashed'),
     createSafeUser: vi.fn((u) => ({ id: u.id, email: u.email, name: u.name, role: u.role, image: null, createdAt: new Date() })),
 }));
 
-import { prisma } from '@/lib/prisma';
-import { hashPassword } from '@/lib/auth-helpers';
+import { hashPassword } from '@/lib/auth/helpers';
+import { prisma } from '@/lib/db/prisma';
 
 describe('POST /api/auth/register', () => {
     beforeEach(() => {
@@ -31,7 +32,7 @@ describe('POST /api/auth/register', () => {
             name: 'Teste User',
             email: 'teste@example.com',
             password: '$2b$12$hashed',
-            role: 'USER',
+            role: Role.USER,
             image: null,
             emailVerified: null,
             createdAt: new Date(),
@@ -47,7 +48,7 @@ describe('POST /api/auth/register', () => {
         expect(hashed).toBe('$2b$12$hashed');
 
         const user = await prisma.user.create({
-            data: { name: 'Teste User', email, password: hashed, role: 'USER' },
+            data: { name: 'Teste User', email, password: hashed, role: Role.USER },
         });
         expect(user.email).toBe(email);
         expect(user.role).toBe('USER');
@@ -59,7 +60,7 @@ describe('POST /api/auth/register', () => {
             name: 'Existente',
             email: 'existente@example.com',
             password: 'hash',
-            role: 'USER',
+            role: Role.USER,
             image: null,
             emailVerified: null,
             createdAt: new Date(),
