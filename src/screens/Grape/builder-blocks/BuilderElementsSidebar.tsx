@@ -235,17 +235,18 @@ export default function BuilderElementsSidebar({
 
                 <div className={`draw-props-list ${propertiesActive ? '' : 'is-hidden'}`}>
                     <section className="draw-side-section">
-                        <h3>Propriedades</h3>
+                        <h3>Edicao Rapida</h3>
                         <div id="styles" />
                     </section>
-                    <section className="draw-side-section">
-                        <h3>Traits</h3>
-                        <div id="traits" />
-                    </section>
-                    <section className="draw-side-section">
-                        <h3>Camadas</h3>
-                        <div id="layers" />
-                    </section>
+                    <details className="draw-side-section draw-props-advanced">
+                        <summary>Opcoes Avancadas</summary>
+                        <div className="draw-props-advanced-body">
+                            <h4>Atributos</h4>
+                            <div id="traits" />
+                            <h4>Camadas</h4>
+                            <div id="layers" />
+                        </div>
+                    </details>
                     <section className="draw-side-section draw-json-preview">
                         <h3>Status</h3>
                         <p>{aiOutput || `${canvasElementsCount} elementos no canvas`}</p>

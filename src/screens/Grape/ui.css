@@ -359,7 +359,7 @@
 
 .draw-props-list {
     display: grid;
-    gap: 10px;
+    gap: 8px;
 }
 
 .draw-group-list.is-hidden,
@@ -918,12 +918,42 @@
 
 .draw-side-section > h3 {
     margin: 0;
-    padding: 10px 12px;
-    font-size: 0.76rem;
-    letter-spacing: 0.08em;
+    padding: 10px 12px 9px;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
     color: var(--draw-muted);
     text-transform: uppercase;
     border-bottom: 1px solid var(--draw-border);
+}
+
+.draw-props-advanced > summary {
+    list-style: none;
+    cursor: pointer;
+    margin: 0;
+    padding: 10px 12px 9px;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    color: var(--draw-muted);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--draw-border);
+}
+
+.draw-props-advanced > summary::-webkit-details-marker {
+    display: none;
+}
+
+.draw-props-advanced-body {
+    padding: 8px 10px 10px;
+    display: grid;
+    gap: 8px;
+}
+
+.draw-props-advanced-body > h4 {
+    margin: 0;
+    font-size: 0.66rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #94a3b8;
 }
 
 .draw-json-preview p {
@@ -995,7 +1025,7 @@
 #styles,
 #traits,
 #layers {
-    min-height: 120px;
+    min-height: 36px;
 }
 
 .gjs-block-categories {
@@ -1283,7 +1313,7 @@
 .gjs-layer,
 .gjs-layer-title {
     background: transparent !important;
-    border-color: rgba(167, 139, 250, 0.32) !important;
+    border-color: rgba(167, 139, 250, 0.2) !important;
 }
 
 .gjs-sm-property,
@@ -1292,19 +1322,77 @@
     color: #e2e8f0 !important;
 }
 
-.gjs-sm-field input,
-.gjs-sm-field select {
-    background: rgba(45, 24, 88, 0.72) !important;
-    color: #f8fafc !important;
-    border-color: rgba(167, 139, 250, 0.45) !important;
+.gjs-sm-sectors {
+    display: grid;
+    gap: 8px;
+    padding: 8px;
 }
 
-.gjs-sm-sector-title,
+.gjs-sm-sector {
+    border: 1px solid rgba(167, 139, 250, 0.22) !important;
+    border-radius: 12px;
+    overflow: hidden;
+    background: rgba(12, 12, 28, 0.64) !important;
+}
+
+.gjs-sm-title,
+.gjs-sm-sector-title {
+    padding: 9px 10px !important;
+    font-size: 0.68rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.04em !important;
+    text-transform: uppercase !important;
+    color: #cbd5e1 !important;
+    background: rgba(19, 18, 41, 0.92) !important;
+}
+
+.gjs-sm-properties {
+    padding: 8px 10px 10px !important;
+}
+
+.gjs-sm-property {
+    margin-bottom: 8px;
+}
+
+.gjs-sm-property:last-child {
+    margin-bottom: 0;
+}
+
+.gjs-sm-label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 0.75rem !important;
+    font-weight: 600;
+    color: #dbeafe !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+}
+
+.gjs-sm-field input,
+.gjs-sm-field select {
+    min-height: 34px;
+    border-radius: 10px !important;
+    background: rgba(17, 18, 46, 0.9) !important;
+    color: #f8fafc !important;
+    border: 1px solid rgba(125, 150, 220, 0.32) !important;
+    padding: 0 10px !important;
+}
+
+.gjs-sm-clear {
+    display: none !important;
+}
+
+.gjs-field {
+    border-radius: 10px !important;
+    border: 1px solid rgba(125, 150, 220, 0.24) !important;
+    background: rgba(17, 18, 46, 0.9) !important;
+}
+
 .gjs-layer-title {
     color: #94a3b8 !important;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    font-size: 0.66rem;
 }
 
 .gjs-editor-cont,

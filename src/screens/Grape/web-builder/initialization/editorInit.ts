@@ -24,34 +24,29 @@ export function initializeGrapesJS(
       appendTo: '#styles',
       sectors: [
         {
-          name: 'Cores',
+          name: 'Aparencia',
           open: true,
-          properties: ['background-color', 'color', 'opacity'],
+          properties: ['background-color', 'color', 'opacity', 'border-radius'],
+        },
+        {
+          name: 'Tamanho',
+          open: true,
+          properties: ['width', 'height'],
+        },
+        {
+          name: 'Posicao',
+          open: true,
+          properties: ['left', 'top'],
         },
         {
           name: 'Texto',
-          open: true,
-          properties: ['font-size', 'font-weight', 'line-height', 'text-align'],
+          open: false,
+          properties: ['font-size', 'font-weight', 'text-align'],
         },
         {
           name: 'Borda',
-          open: true,
-          properties: ['border-width', 'border-style', 'border-color', 'border-radius'],
-        },
-        {
-          name: 'Dimensao',
-          open: true,
-          properties: ['width', 'height', 'max-width', 'min-height'],
-        },
-        {
-          name: 'Posicao e Espacamento',
-          open: true,
-          properties: ['position', 'left', 'top', 'right', 'bottom', 'z-index', 'padding', 'margin'],
-        },
-        {
-          name: 'Transform',
           open: false,
-          properties: ['transform'],
+          properties: ['border-width', 'border-style', 'border-color'],
         },
       ],
     },
