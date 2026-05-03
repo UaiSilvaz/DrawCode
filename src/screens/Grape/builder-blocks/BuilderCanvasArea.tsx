@@ -1,9 +1,7 @@
 import type { DragEvent, RefObject } from 'react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Dock, { type DockItemData } from '@/components/Dock';
-import { ChevronDown, FileText, Plus } from 'lucide-react';
-import type { AIGenerationResult } from './types';
-import AIPreviewPanel from './AIPreviewPanel';
+import { ChevronDown, FileText, LoaderCircle, Plus, Sparkles } from 'lucide-react';
 
 interface BuilderCanvasAreaProps {
     canvasShellRef: RefObject<HTMLDivElement | null>;
@@ -23,40 +21,18 @@ interface BuilderCanvasAreaProps {
     onCreatePage: () => void;
     onSelectPage: (index: number) => void;
     aiGenerating: boolean;
-    aiPreview: AIGenerationResult | null;
-    onCloseAiPreview: () => void;
 }
 
 function AILoadingState() {
-    const [progress, setProgress] = useState(8);
-
-    useEffect(() => {
-        const timer = window.setInterval(() => {
-            setProgress((current) => Math.min(96, current + (current < 50 ? 9 : 4)));
-        }, 420);
-
-        return () => window.clearInterval(timer);
-    }, []);
-
     return (
         <div className="draw-ai-loading">
-            <div className="draw-ai-loading-grid" />
-            <div className="draw-ai-loading-orbit" />
-            <div className="draw-ai-loading-ring" />
+            <div className="draw-ai-loading-icon">
+                <Sparkles size={22} />
+                <LoaderCircle size={22} className="draw-ai-loading-spinner" />
+            </div>
             <div className="draw-ai-loading-text">
-                <small>DrawCode AI Agent</small>
-                <strong>Analisando desenho...</strong>
-                <span>Detectando linhas, retangulos, circulos, textos e blocos para montar componentes editaveis em React + CSS.</span>
-                <div className="draw-ai-progress" aria-label="Progresso da IA">
-                    <span style={{ width: `${progress}%` }} />
-                </div>
-                <div className="draw-ai-progress-label">{progress}% processado</div>
-                <div className="draw-ai-loading-steps">
-                    <span>Lendo canvas</span>
-                    <span>Reconhecendo formas</span>
-                    <span>Gerando codigo</span>
-                    <span>Preparando editor</span>
-                </div>
+                <strong>Melhorando o layout</strong>
+                <span>Transformando rabiscos e blocos em componentes reais no canvas.</span>
             </div>
         </div>
     );
@@ -80,8 +56,6 @@ export default function BuilderCanvasArea({
     onCreatePage,
     onSelectPage,
     aiGenerating,
-    aiPreview,
-    onCloseAiPreview,
 }: BuilderCanvasAreaProps) {
     const [pagesMenuOpen, setPagesMenuOpen] = useState(false);
 
@@ -129,19 +103,9 @@ export default function BuilderCanvasArea({
                 onDrop={onCanvasDrop}
             >
                 <div id="gjs" className="draw-canvas" />
-                {(aiGenerating || aiPreview) && (
+                {aiGenerating && (
                     <div className="draw-ai-stage">
-                        {aiGenerating && (
-                            <AILoadingState />
-                        )}
-
-                        {!aiGenerating && aiPreview && (
-                            <AIPreviewPanel
-                                key={`${aiPreview.summary}-${aiPreview.interpretedSketch}`}
-                                aiPreview={aiPreview}
-                                onCloseAiPreview={onCloseAiPreview}
-                            />
-                        )}
+                        <AILoadingState />
                     </div>
                 )}
             </div>

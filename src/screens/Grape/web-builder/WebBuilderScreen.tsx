@@ -9,7 +9,8 @@ import BuilderToolbar from '../builder-blocks/BuilderToolbar';
 import BuilderElementsSidebar from '../builder-blocks/BuilderElementsSidebar';
 import BuilderCanvasArea from '../builder-blocks/BuilderCanvasArea';
 import BuilderContextMenu from '../builder-blocks/BuilderContextMenu';
-import type { AIGenerationResult, DrawToolId } from '../builder-blocks/types';
+import type { DrawToolId } from '../builder-blocks/types';
+import type { RecognizedShape, RecognizedShapeKind } from '@/lib/ai/types';
 import {
     PAGE_HEIGHT,
     PAGE_WIDTH,
@@ -69,7 +70,6 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
         saveMsg,
         aiOutput,
         aiGenerating,
-        aiPreview,
         currentProjectId,
         projectName,
         snapEnabled,
@@ -89,7 +89,6 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
         setSaveMsg,
         setAiOutput,
         setAiGenerating,
-        setAiPreview,
         setCurrentProjectId,
         setProjectName,
         setSnapEnabled,
@@ -690,6 +689,154 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
         };
     }, [canvasStructure]);
 
+    const shapeKindToDataType = useCallback((kind: RecognizedShapeKind) => {
+        if (kind === 'circle') return 'shape-circle';
+        if (kind === 'line') return 'shape-line';
+        if (kind === 'triangle') return 'shape-triangle';
+        if (kind === 'button') return 'button';
+        if (kind === 'input') return 'input';
+        if (kind === 'text') return 'paragraph';
+        if (kind === 'image') return 'image';
+        if (kind === 'container') return 'container';
+        return 'shape-rectangle';
+    }, []);
+
+    const shapeKindToTag = useCallback((kind: RecognizedShapeKind) => {
+        if (kind === 'button') return 'button';
+        if (kind === 'input') return 'input';
+        if (kind === 'text') return 'p';
+        if (kind === 'image') return 'img';
+        return 'div';
+    }, []);
+
+    const normalizeGeneratedShape = useCallback((shape: RecognizedShape): RecognizedShape => {
+        if (shape.kind !== 'circle') return shape;
+
+        const size = Math.max(shape.width, shape.height);
+        return {
+            ...shape,
+            x: Math.round(shape.x - (size - shape.width) / 2),
+            y: Math.round(shape.y - (size - shape.height) / 2),
+            width: size,
+            height: size,
+            borderRadius: 999,
+        };
+    }, []);
+
+    const shapeToCanvasComponent = useCallback((rawShape: RecognizedShape): Record<string, unknown> => {
+        const shape = normalizeGeneratedShape(rawShape);
+        const tagName = shapeKindToTag(shape.kind);
+        const solidColor = shape.color || '#8b5cf6';
+        const height = shape.kind === 'line' ? Math.max(4, Math.min(10, shape.height)) : shape.height;
+        const text = shape.text || shape.label;
+        const style: Record<string, string | number> = {
+            position: 'absolute',
+            left: `${shape.x}px`,
+            top: `${shape.y}px`,
+            width: `${shape.width}px`,
+            height: `${height}px`,
+            'background-color': shape.kind === 'text' || shape.kind === 'image' ? 'transparent' : solidColor,
+            color: shape.kind === 'text' || shape.kind === 'input' ? '#111827' : '#ffffff',
+            'border-radius': `${shape.kind === 'circle' || shape.kind === 'line' ? 999 : shape.borderRadius}px`,
+            border: shape.kind === 'input' ? '1px solid rgba(124, 58, 237, 0.28)' : '0',
+            opacity: shape.opacity || 1,
+            'z-index': shape.zIndex || 1,
+            'box-sizing': 'border-box',
+        };
+
+        if (shape.kind === 'line') {
+            style.transform = `rotate(${shape.rotation || 0}deg)`;
+            style['transform-origin'] = 'left center';
+        }
+
+        if (shape.kind === 'triangle') {
+            style['clip-path'] = 'polygon(50% 0%, 0 100%, 100% 100%)';
+        }
+
+        if (shape.kind === 'button') {
+            style.display = 'inline-flex';
+            style['align-items'] = 'center';
+            style['justify-content'] = 'center';
+            style['font-weight'] = 800;
+            style.cursor = 'pointer';
+        }
+
+        if (shape.kind === 'text') {
+            style.margin = '0';
+            style.padding = '0';
+            style['font-size'] = '18px';
+            style['line-height'] = '1.35';
+            style['font-weight'] = 700;
+        }
+
+        if (shape.kind === 'input') {
+            style.padding = '0 14px';
+            style['font-size'] = '16px';
+        }
+
+        const attributes: Record<string, string> = {
+            'data-dc-type': shapeKindToDataType(shape.kind),
+            'data-ai-generated': 'true',
+        };
+
+        if (tagName === 'input') {
+            attributes.placeholder = text || 'Digite aqui';
+        }
+
+        if (tagName === 'img') {
+            attributes.src = 'https://placehold.co/800x450?text=Imagem';
+            attributes.alt = text || 'Imagem';
+            style['object-fit'] = 'cover';
+        }
+
+        const component: Record<string, unknown> = {
+            tagName,
+            attributes,
+            style,
+        };
+
+        if (tagName !== 'input' && tagName !== 'img' && ['button', 'text'].includes(shape.kind)) {
+            component.content = text || (shape.kind === 'button' ? 'Botao' : 'Texto');
+        }
+
+        return component;
+    }, [normalizeGeneratedShape, shapeKindToDataType, shapeKindToTag]);
+
+    const applyAiGeneratedLayout = useCallback((shapes: RecognizedShape[]) => {
+        if (!editor || shapes.length === 0) return false;
+
+        const wrapper = editor.getWrapper() as unknown as AnyComponent | null;
+        if (!wrapper) return false;
+
+        const components = shapes
+            .map(shapeToCanvasComponent)
+            .sort((a, b) => {
+                const styleA = a.style as Record<string, string | number>;
+                const styleB = b.style as Record<string, string | number>;
+                return Number(styleA['z-index'] || 0) - Number(styleB['z-index'] || 0);
+            });
+
+        wrapper.components().reset(components);
+        editor.setStyle([] as never);
+        const schema = syncCanvasSchema(editor);
+        const pageIndex = activePageIndexRef.current;
+        const currentPage = pagesRef.current[pageIndex];
+
+        if (currentPage) {
+            const nextPages = [...pagesRef.current];
+            nextPages[pageIndex] = {
+                ...currentPage,
+                components: editor.getComponents() as unknown as unknown[],
+                styles: editor.getStyle() as unknown,
+                schema,
+            };
+            pagesRef.current = nextPages;
+            setPages(nextPages);
+        }
+
+        return true;
+    }, [activePageIndexRef, editor, pagesRef, setPages, shapeToCanvasComponent, syncCanvasSchema]);
+
     const handleGenerateAi = useCallback(async () => {
         if (!editor) {
             setSaveMsg('Editor indisponivel para gerar com IA.');
@@ -697,7 +844,6 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
         }
 
         setAiGenerating(true);
-        setAiPreview(null);
         setSaveMsg('');
 
         try {
@@ -725,12 +871,14 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
                 throw new Error(typeof result?.error === 'string' ? result.error : 'Falha ao gerar com IA.');
             }
 
-            const nextOutput = JSON.stringify(result.output, null, 2);
-            setAiOutput(nextOutput);
-            setAiPreview(result.output as AIGenerationResult);
-            setLeftSidebarCollapsed(false);
-            setLeftPanelMode('properties');
-            setSaveMsg('Preview da IA gerado com sucesso.');
+            const output = result.output as { recognizedShapes?: RecognizedShape[]; summary?: string };
+            const shapes = output.recognizedShapes ?? [];
+            const applied = applyAiGeneratedLayout(shapes);
+
+            setAiOutput(applied ? 'Layout atualizado pela IA.' : 'Nenhuma forma foi reconhecida para aplicar.');
+            setLeftSidebarCollapsed(true);
+            setLeftPanelMode('elements');
+            setSaveMsg(applied ? 'Layout atualizado com IA.' : 'Desenhe ou adicione elementos antes de gerar com IA.');
             setTimeout(() => setSaveMsg(''), 2800);
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Falha ao gerar com IA.';
@@ -745,9 +893,9 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
         pagesRef,
         captureCanvasSnapshot,
         buildSketchHints,
+        applyAiGeneratedLayout,
         setAiGenerating,
         setAiOutput,
-        setAiPreview,
         setLeftSidebarCollapsed,
         setLeftPanelMode,
         setSaveMsg,
@@ -1033,8 +1181,6 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
                 onCreatePage={handleCreatePage}
                 onSelectPage={handleSelectPage}
                 aiGenerating={aiGenerating}
-                aiPreview={aiPreview}
-                onCloseAiPreview={() => setAiPreview(null)}
             />
 
             <BuilderContextMenu

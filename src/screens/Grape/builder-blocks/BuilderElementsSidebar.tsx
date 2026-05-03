@@ -247,9 +247,8 @@ export default function BuilderElementsSidebar({
                         <div id="layers" />
                     </section>
                     <section className="draw-side-section draw-json-preview">
-                        <h3>JSON da IA</h3>
-                        <p>{canvasElementsCount} elementos no canvas</p>
-                        {aiOutput && <pre className="draw-ai-output">{aiOutput}</pre>}
+                        <h3>Status</h3>
+                        <p>{aiOutput || `${canvasElementsCount} elementos no canvas`}</p>
                     </section>
                 </div>
             </div>

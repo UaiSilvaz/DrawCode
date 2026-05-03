@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import type { AIGenerationResult, ContextMenuState, DrawToolId, LeftPanelMode, SidebarBlockItem } from '../../builder-blocks/types';
+import type { ContextMenuState, DrawToolId, LeftPanelMode, SidebarBlockItem } from '../../builder-blocks/types';
 import type { CanvasPage, EditorInstance, CanvasElementNode } from '../builder-core';
 
 export function useEditorState(initialProjectId?: string, initialProjectName?: string) {
@@ -19,7 +19,6 @@ export function useEditorState(initialProjectId?: string, initialProjectName?: s
   const [sidebarBlocks, setSidebarBlocks] = useState<SidebarBlockItem[]>([]);
   const [aiOutput, setAiOutput] = useState('');
   const [aiGenerating, setAiGenerating] = useState(false);
-  const [aiPreview, setAiPreview] = useState<AIGenerationResult | null>(null);
   const [pages, setPages] = useState<CanvasPage[]>([
     {
       id: 'page-1',
@@ -63,7 +62,6 @@ export function useEditorState(initialProjectId?: string, initialProjectName?: s
     sidebarBlocks,
     aiOutput,
     aiGenerating,
-    aiPreview,
     pages,
     activePageIndex,
     isPanning,
@@ -85,7 +83,6 @@ export function useEditorState(initialProjectId?: string, initialProjectName?: s
     setSidebarBlocks,
     setAiOutput,
     setAiGenerating,
-    setAiPreview,
     setPages,
     setActivePageIndex,
     setIsPanning,

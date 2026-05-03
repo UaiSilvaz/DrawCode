@@ -63,6 +63,61 @@ const parseSvgLineGeometry = (html: string) => {
     return { x1, y1, width, rotation };
 };
 
+const parseSvgPathGeometry = (html: string) => {
+    const pathMatch = html.match(/<path\b[^>]*\sd=["']([^"']+)["'][^>]*>/i);
+    const pathData = pathMatch?.[1];
+    if (!pathData) return null;
+
+    const points = Array.from(pathData.matchAll(/[-\d.]+[,\s]+[-\d.]+/g))
+        .map((match) => {
+            const [xRaw, yRaw] = match[0].split(/[,\s]+/).filter(Boolean);
+            const x = Number.parseFloat(xRaw ?? '');
+            const y = Number.parseFloat(yRaw ?? '');
+            return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null;
+        })
+        .filter((point): point is { x: number; y: number } => Boolean(point));
+
+    if (points.length < 2) return null;
+
+    const xs = points.map((point) => point.x);
+    const ys = points.map((point) => point.y);
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+    const width = Math.max(1, maxX - minX);
+    const height = Math.max(1, maxY - minY);
+    const start = points[0];
+    const end = points[points.length - 1];
+    const diagonal = Math.hypot(width, height);
+    const endpointDistance = Math.hypot(end.x - start.x, end.y - start.y);
+    const closed = endpointDistance <= Math.max(18, diagonal * 0.25);
+    const ratio = width / height;
+    const strokeLength = points.slice(1).reduce((total, point, index) => {
+        const previous = points[index];
+        return total + Math.hypot(point.x - previous.x, point.y - previous.y);
+    }, 0);
+    const directDistance = Math.hypot(end.x - start.x, end.y - start.y);
+    const lineLike = !closed && (
+        ratio >= 3 ||
+        ratio <= 0.34 ||
+        directDistance >= strokeLength * 0.72
+    );
+    const rotation = Math.atan2(end.y - start.y, end.x - start.x) * (180 / Math.PI);
+
+    return {
+        x1: start.x,
+        y1: start.y,
+        width,
+        height,
+        rotation,
+        closed,
+        lineLike,
+        circleLike: closed && ratio >= 0.65 && ratio <= 1.45,
+        rectangleLike: closed && !lineLike,
+    };
+};
+
 const flattenElements = (elements: WrapperElementSnapshot[]) => {
     const output: WrapperElementSnapshot[] = [];
     const stack = [...elements];
@@ -110,7 +165,20 @@ const inferKind = (element: WrapperElementSnapshot): {
     }
 
     if (type.includes('freehand') || html.includes('<path')) {
-        return { kind: ratio >= 3 ? 'line' : 'freehand', confidence: 0.82, label: 'Risco livre' };
+        const pathGeometry = parseSvgPathGeometry(element.html);
+        if (pathGeometry?.circleLike) {
+            return { kind: 'circle', confidence: 0.86, label: 'Circulo desenhado' };
+        }
+
+        if (pathGeometry?.lineLike || ratio >= 3) {
+            return { kind: 'line', confidence: 0.82, label: 'Linha desenhada' };
+        }
+
+        if (pathGeometry?.rectangleLike) {
+            return { kind: 'rectangle', confidence: 0.72, label: 'Forma desenhada' };
+        }
+
+        return { kind: 'rectangle', confidence: 0.64, label: 'Forma livre' };
     }
 
     if (type.includes('shape-circle') || (radius >= minSide * 0.45 && ratio >= 0.72 && ratio <= 1.38)) {
@@ -191,7 +259,9 @@ export function recognizeShapesFromPayload(payload: AIGenerateRequest): Recogniz
         .map((element, index) => {
             const inferred = inferKind(element);
             const kind = inferred.kind;
-            const lineGeometry = kind === 'line' ? parseSvgLineGeometry(element.html) : null;
+            const lineGeometry = kind === 'line'
+                ? parseSvgLineGeometry(element.html) ?? parseSvgPathGeometry(element.html)
+                : null;
             const width = lineGeometry
                 ? Math.round(lineGeometry.width)
                 : Math.max(1, Math.round(element.size.width));

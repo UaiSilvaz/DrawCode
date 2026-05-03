@@ -29,13 +29,12 @@ O objetivo principal do produto e tornar o aprendizado e a criacao de front-end 
 - Fazer upload de imagem para um elemento de imagem selecionado.
 - Gerar preview e codigo a partir do conteudo do canvas.
 - Reconhecer formas desenhadas e converter cada forma em elemento React/HTML individual.
-- Editar formas geradas por IA com sincronizacao entre preview, codigo e painel.
-- Coletar feedback local de treinamento para aceitar, rejeitar ou corrigir reconhecimentos.
+- Aplicar o layout gerado diretamente no canvas do editor.
 - Manter modelo de dados de usuarios, contas, sessoes e projetos.
 
 ### 2.2 Fora do Escopo Atual ou Parcialmente Implementado
 
-- Fine-tuning real de modelo com base exportada. O sistema ja coleta exemplos locais, mas o treino externo ainda depende de dataset e quota.
+- Fine-tuning real de modelo com base exportada.
 - Publicacao automatica do site gerado.
 - Publicacao/hospedagem do site criado pelo usuario.
 - Compartilhamento ou colaboracao em tempo real.
@@ -218,16 +217,16 @@ Observacao sobre RF-037: a navegacao com `template` existe, mas nao foi localiza
 | RF-096 | A rota de geracao deve retornar resumo, interpretacao de desenho, preview, codigo e recomendacoes. | Implementado | Alta |
 | RF-097 | O editor deve exibir overlay de carregamento durante a geracao. | Implementado | Media |
 | RF-098 | O editor deve bloquear a edicao visual enquanto o preview gerado estiver sobre o canvas. | Implementado | Media |
-| RF-099 | O editor deve exibir abas de Preview IA, Editor, Treinamento, React, CSS, HTML, JS, Semantica e Preview fiel. | Implementado | Alta |
-| RF-100 | O usuario deve poder fechar o painel de preview e voltar ao editor. | Implementado | Alta |
+| RF-099 | O editor deve aplicar o resultado da IA diretamente no canvas, sem abrir modal de preview. | Implementado | Alta |
+| RF-100 | O usuario deve continuar editando o layout gerado no proprio editor. | Implementado | Alta |
 | RF-101 | O sistema deve reconhecer formas como linhas, retangulos, circulos, triangulos, textos, botoes, inputs, imagens e containers. | Implementado | Alta |
 | RF-102 | Cada forma reconhecida deve virar um elemento individual no codigo gerado. | Implementado | Alta |
-| RF-103 | O usuario deve editar tipo, cor, tamanho e posicao das formas geradas. | Implementado | Alta |
-| RF-104 | Mudancas no editor da IA devem atualizar preview, HTML, CSS, JS e React em tempo real. | Implementado | Alta |
-| RF-105 | O sistema deve exibir metricas de formas reconhecidas, confianca media, tempo de processamento e acuracia revisada. | Implementado | Media |
-| RF-106 | O sistema deve salvar feedbacks de aceitar, rejeitar e corrigir no `localStorage` como base de treinamento. | Implementado | Media |
+| RF-103 | Rabiscos feitos com lapis devem ser normalizados para formas reais quando possivel. | Implementado | Alta |
+| RF-104 | O usuario deve editar o resultado usando as ferramentas normais do GrapesJS. | Implementado | Alta |
+| RF-105 | O sistema deve exibir carregamento simples durante a transformacao por IA. | Implementado | Media |
+| RF-106 | A API deve continuar retornando HTML, CSS, JS e React para exportacao futura. | Implementado | Media |
 
-Observacao importante: a geracao tenta usar OpenAI quando `OPENAI_API_KEY` esta configurada. Caso contrario, ou em caso de erro/quota, o sistema usa fallback deterministico e mantem reconhecimento, preview, codigo e treinamento local funcionando.
+Observacao importante: a geracao tenta usar OpenAI quando `OPENAI_API_KEY` esta configurada. Caso contrario, ou em caso de erro/quota, o sistema usa fallback deterministico e mantem reconhecimento, aplicacao no canvas e codigo funcionando.
 
 ### 5.11 Dados do Usuario e Inicializacao
 
@@ -409,18 +408,15 @@ Observacao importante: a geracao tenta usar OpenAI quando `OPENAI_API_KEY` esta 
   3. Sistema captura wrapper branco e elementos filhos.
   4. Sistema envia snapshot para `/api/ai/generate`.
   5. API valida payload.
-  6. API reconhece formas e reconstrui preview/codigo com elementos individuais.
-  7. API retorna preview, codigo, formas reconhecidas, metricas e recomendacoes.
-  8. Sistema exibe painel com abas Preview IA, Editor, Treinamento, React, CSS, HTML, JS, Semantica e Preview fiel.
-  9. Usuario edita tipo, cor, tamanho ou posicao de uma forma.
-  10. Sistema sincroniza preview e codigo em tempo real.
-  11. Usuario aceita, rejeita ou corrige reconhecimentos para treinar a base local.
-  12. Usuario fecha preview e volta ao editor.
+  6. API reconhece formas e gera componentes individuais.
+  7. API retorna codigo, formas reconhecidas e recomendacoes.
+  8. Sistema substitui os elementos do wrapper branco pelo layout gerado.
+  9. Usuario edita o resultado normalmente no canvas.
 - Fluxos alternativos:
   - Editor indisponivel: sistema exibe erro.
   - Payload invalido: API retorna erro 400.
   - Falha interna: API retorna erro 500.
-- Pos-condicoes: preview, codigo, metricas e exemplos locais de treinamento ficam disponiveis no editor.
+- Pos-condicoes: o canvas passa a exibir o layout gerado pela IA.
 
 ### UC-08 - Fazer Logout
 
@@ -547,7 +543,7 @@ Representa um projeto visual salvo.
 | Paginas do editor | RF-070 a RF-073 | `src/screens/Grape/web-builder/WebBuilderScreen.tsx`, `src/screens/Grape/web-builder/hooks/useCanvasSync.ts` |
 | Persistencia | RF-074 a RF-081 | `src/screens/Grape/web-builder/hooks/useSaveHandler.ts`, `src/app/api/grape/save/route.ts`, `prisma/schema.prisma` |
 | Import/export/upload | RF-082 a RF-088 | `src/screens/Grape/web-builder/hooks/useFileHandlers.ts`, `src/screens/Grape/builder-blocks/BuilderToolbar.tsx` |
-| Geracao de preview | RF-089 a RF-106 | `src/app/api/ai/generate/route.ts`, `src/screens/Grape/builder-blocks/BuilderCanvasArea.tsx`, `src/screens/Grape/builder-blocks/AIPreviewPanel.tsx` |
+| Geracao de preview | RF-089 a RF-106 | `src/app/api/ai/generate/route.ts`, `src/screens/Grape/web-builder/WebBuilderScreen.tsx`, `src/screens/Grape/builder-blocks/BuilderCanvasArea.tsx` |
 | Dados do usuario | RF-107 a RF-110 | `src/app/api/users/me/route.ts`, `prisma/seed.ts`, `public/manifest.json` |
 
 ## 12. Requisitos de Validacao e Criterios de Aceite
@@ -566,11 +562,10 @@ Representa um projeto visual salvo.
 | CA-010 | Um usuario nao consegue atualizar projeto de outro usuario. |
 | CA-011 | O JSON exportado pode ser reimportado sem perda estrutural critica. |
 | CA-012 | O upload de imagem so funciona quando um elemento de imagem esta selecionado. |
-| CA-013 | "Gerar com IA" retorna painel com preview e abas de codigo. |
+| CA-013 | "Gerar com IA" transforma o conteudo do canvas em componentes editaveis. |
 | CA-014 | O preview gerado usa posicoes relativas ao wrapper branco e nao ao body inteiro. |
 | CA-015 | A rota de geracao rejeita payload invalido com erro 400. |
-| CA-016 | O editor de IA permite mudar tipo, cor, tamanho e posicao de uma forma e atualiza o preview. |
-| CA-017 | O painel de treinamento registra feedback local em `localStorage`. |
+| CA-016 | Um rabisco circular feito com lapis vira um circulo real no canvas quando possivel. |
 
 ## 13. Riscos, Limitacoes e Pendencias
 
@@ -591,8 +586,7 @@ Representa um projeto visual salvo.
 1. Criar requisito de abertura de projeto por ID a partir do dashboard.
 2. Criar requisito de exclusao e renomeacao de projeto no dashboard.
 3. Criar requisito de aplicacao real de templates ao abrir `/grape?template=...`.
-4. Transformar os exemplos de treinamento local em dataset JSONL validado.
-5. Criar rotina de avaliacoes para comparar prompt, fallback e futuro fine-tuning.
+4. Criar rotina de avaliacoes para comparar prompt, fallback e futuro fine-tuning.
 6. Criar requisito de publicacao/exportacao completa do site criado.
 7. Criar envio real do formulario de contato.
 8. Criar recuperacao de senha e verificacao de email.
@@ -609,4 +603,3 @@ Representa um projeto visual salvo.
 - Projeto Grape: projeto salvo no banco com dados do editor.
 - Preview fiel: reconstrucao visual baseada em posicoes, tamanhos e estilos do canvas.
 - IA real: uso de modelo para interpretar desenhos, gerar componentes semanticos e melhorar codigo.
-- Base de treinamento: exemplos salvos localmente com previsao da IA e correcao do usuario.

@@ -105,18 +105,6 @@ export interface AIGenerationMetrics {
     lowConfidenceCount: number;
 }
 
-export interface AITrainingFeedbackRecord {
-    id: string;
-    shapeId: string;
-    detectedKind: RecognizedShapeKind;
-    correctedKind: RecognizedShapeKind;
-    action: 'accepted' | 'rejected' | 'corrected';
-    confidence: number;
-    shape: RecognizedShape;
-    createdAt: string;
-    generationMode: 'openai' | 'deterministic';
-}
-
 export interface PreviewBundle {
     html: string;
     css: string;

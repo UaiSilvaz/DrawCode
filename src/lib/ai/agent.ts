@@ -161,15 +161,11 @@ const buildSummary = (page: SemanticPage, mode: 'openai' | 'deterministic') => {
     return `Preview aprimorado gerado pelo ${source}: ${componentCount} componente(s) semantico(s) organizados em React + CSS.`;
 };
 
-const buildShapeSummary = (
-    shapeCount: number,
-    averageConfidence: number,
-    mode: 'openai' | 'deterministic',
-) => {
-    const source = mode === 'openai' ? 'IA + reconhecedor visual' : 'reconhecedor visual local';
-    const confidence = Math.round(averageConfidence * 100);
-    return `${source}: ${shapeCount} forma(s) convertida(s) em elementos individuais React/HTML com confianca media de ${confidence}%.`;
-};
+const buildShapeSummary = (mode: 'openai' | 'deterministic') => (
+    mode === 'openai'
+        ? 'Layout atualizado pela IA em componentes editaveis.'
+        : 'Layout atualizado pelo reconhecedor visual local.'
+);
 
 const buildSketchSummary = (payload: AIGenerateRequest, mode: 'openai' | 'deterministic') => {
     if (payload.sketchHints.freehandCount === 0) {
@@ -212,7 +208,7 @@ export async function generateDrawCodeAI(payload: AIGenerateRequest): Promise<AI
 
     return {
         summary: recognizedShapes.length > 0
-            ? buildShapeSummary(recognizedShapes.length, metrics.averageConfidence, mode)
+            ? buildShapeSummary(mode)
             : buildSummary(semanticPage, mode),
         interpretedSketch: buildSketchSummary(payload, mode),
         preview: recognizedShapes.length > 0 ? shapeGenerated.preview : generated.preview,
@@ -222,9 +218,8 @@ export async function generateDrawCodeAI(payload: AIGenerateRequest): Promise<AI
         metrics,
         semanticPage,
         recommendations: [
-            'Cada forma reconhecida foi transformada em um elemento individual editavel.',
-            'Saida principal gerada em React + CSS, com HTML/CSS/JS como export secundario.',
-            'Use o painel de treinamento para aceitar, rejeitar ou corrigir reconhecimentos.',
+            'O layout foi convertido em componentes editaveis no canvas.',
+            'Saida principal disponivel em React + CSS, com HTML/CSS/JS como export secundario.',
             'Revise textos e acessibilidade antes de publicar o site final.',
             mode === 'deterministic'
                 ? 'Adicione OPENAI_API_KEY para ativar a interpretacao por IA real.'

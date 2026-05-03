@@ -6,7 +6,6 @@ export interface ContextMenuState {
 
 export type LeftPanelMode = 'elements' | 'properties' | 'draw';
 export type DrawToolId = 'select' | 'pencil' | 'line' | 'square' | 'circle' | 'triangle' | 'text';
-export type { AIGenerationResult } from '@/lib/ai/types';
 
 export type SidebarIcon = 'layout' | 'shape' | 'component' | 'image' | 'text';
 

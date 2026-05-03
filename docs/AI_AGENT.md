@@ -1,6 +1,6 @@
 # DrawCode AI Agent
 
-O agente de IA transforma o canvas visual do editor em um site gerado principalmente em React + CSS. HTML, CSS e JS continuam disponiveis como export secundario. Cada forma reconhecida vira um elemento individual editavel.
+O agente de IA transforma o canvas visual do editor em componentes reais dentro do proprio canvas. HTML, CSS, JS e React continuam sendo gerados pela API como export secundario, mas a experiencia principal e atualizar a pagina visualmente.
 
 ## Variaveis de Ambiente
 
@@ -22,9 +22,9 @@ Se `OPENAI_API_KEY` nao estiver configurada, o sistema usa fallback deterministi
 3. `src/lib/ai/agent.ts` tenta chamar a OpenAI Responses API.
 4. A resposta precisa seguir a arvore semantica validada por Zod.
 5. `src/lib/ai/shape-recognizer.ts` detecta retangulos, circulos, linhas, triangulos, textos, inputs, botoes, imagens e containers.
-6. `src/lib/ai/shape-code-generator.ts` gera React + CSS como saida principal e HTML, CSS e JS como export secundario.
-7. O painel do editor exibe Preview IA, Editor, Treinamento, React, CSS, HTML, JS, Semantica e Preview fiel.
-8. Feedbacks de aceitar, rejeitar e corrigir sao salvos no `localStorage` como base local de treinamento.
+6. `src/lib/ai/shape-code-generator.ts` gera React + CSS e HTML/CSS/JS como export secundario.
+7. `WebBuilderScreen.tsx` aplica as formas reconhecidas diretamente no wrapper branco do GrapesJS.
+8. O usuario continua editando o resultado no canvas normal, sem modal de preview.
 
 ## Camadas
 
@@ -36,8 +36,8 @@ Se `OPENAI_API_KEY` nao estiver configurada, o sistema usa fallback deterministi
 | `src/lib/ai/semantic-analyzer.ts` | Interpretacao local quando nao ha API key ou quando a IA falha. |
 | `src/lib/ai/code-generator.ts` | Gera React + CSS e exports secundarios. |
 | `src/lib/ai/shape-recognizer.ts` | Reconhece formas desenhadas e calcula confianca/metrica. |
-| `src/lib/ai/shape-code-generator.ts` | Gera codigo sincronizado a partir das formas editaveis. |
-| `src/screens/Grape/builder-blocks/AIPreviewPanel.tsx` | Preview, editor em tempo real, metricas e treinamento local. |
+| `src/lib/ai/shape-code-generator.ts` | Gera codigo a partir das formas reconhecidas. |
+| `src/screens/Grape/web-builder/WebBuilderScreen.tsx` | Aplica o layout gerado no canvas do editor. |
 | `src/lib/ai/types.ts` | Tipos compartilhados. |
 
 ## Estrategia Para o TCC
@@ -45,8 +45,7 @@ Se `OPENAI_API_KEY` nao estiver configurada, o sistema usa fallback deterministi
 A arquitetura separa duas ideias:
 
 - Preview fiel: reproduz o que o usuario desenhou no canvas.
-- Preview IA: interpreta intencao visual e transforma em componentes reais.
-- Editor IA: permite alterar tipo, cor, tamanho e posicao das formas reconhecidas.
-- Treinamento local: coleta exemplos corrigidos pelo usuario para futura melhoria de prompt ou fine-tuning.
+- Aplicacao no canvas: transforma rabiscos e formas em componentes reais editaveis.
+- Fallback local: quando a OpenAI falha ou nao ha quota, o reconhecedor visual ainda atualiza o canvas.
 
 Isso permite defender que o sistema evolui de um construtor visual deterministico para um agente capaz de inferir componentes semanticos como `navbar`, `hero`, `cardGrid`, `form`, `field`, `image` e `footer`.
