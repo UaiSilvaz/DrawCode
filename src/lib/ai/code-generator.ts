@@ -457,17 +457,6 @@ document.addEventListener('submit', (event) => {
 });
 `.trim();
 
-const buildBackendCode = (page: SemanticPage) => [
-    'export async function GET() {',
-    '  return Response.json({',
-    `    pageType: ${JSON.stringify(page.pageType)},`,
-    `    layoutIntent: ${JSON.stringify(page.layoutIntent)},`,
-    "    status: 'static-export-ready',",
-    "    message: 'Backend real deve ser conectado conforme formularios, autenticação ou dados dinamicos do projeto.',",
-    '  });',
-    '}',
-].join('\n');
-
 export function generateCodeFromSemanticPage(page: SemanticPage): {
     preview: PreviewBundle;
     code: GeneratedCodeBundle;
@@ -487,7 +476,6 @@ export function generateCodeFromSemanticPage(page: SemanticPage): {
             css,
             js,
             react: buildReact(page, css),
-            backend: buildBackendCode(page),
         },
     };
 }

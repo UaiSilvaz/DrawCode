@@ -4,6 +4,8 @@ import {
     semanticPageJsonSchema,
     semanticPageSchema,
 } from './semantic-schema';
+import { generateCodeFromRecognizedShapes } from './shape-code-generator';
+import { buildShapeMetrics, recognizeShapesFromPayload } from './shape-recognizer';
 import {
     buildFaithfulGenerationResult,
     type AIGenerateRequest,
@@ -56,7 +58,7 @@ Regras:
 - Preserve a intencao visual do usuario.
 - Use componentes como navbar, hero, cardGrid, card, form, field, button, image, footer e section.
 - Se houver rabiscos/desenhos livres, interprete-os como sugestoes de estrutura quando estiverem perto de textos, botoes ou inputs.
-- Nao invente backend. Apenas descreva componentes visuais.
+- Gere somente componentes visuais, sem rotas, APIs ou logica server-side.
 - Use confidence entre 0 e 1.
 - Mantenha textos em portugues quando a entrada estiver em portugues.
 `.trim();
@@ -159,6 +161,16 @@ const buildSummary = (page: SemanticPage, mode: 'openai' | 'deterministic') => {
     return `Preview aprimorado gerado pelo ${source}: ${componentCount} componente(s) semantico(s) organizados em React + CSS.`;
 };
 
+const buildShapeSummary = (
+    shapeCount: number,
+    averageConfidence: number,
+    mode: 'openai' | 'deterministic',
+) => {
+    const source = mode === 'openai' ? 'IA + reconhecedor visual' : 'reconhecedor visual local';
+    const confidence = Math.round(averageConfidence * 100);
+    return `${source}: ${shapeCount} forma(s) convertida(s) em elementos individuais React/HTML com confianca media de ${confidence}%.`;
+};
+
 const buildSketchSummary = (payload: AIGenerateRequest, mode: 'openai' | 'deterministic') => {
     if (payload.sketchHints.freehandCount === 0) {
         return mode === 'openai'
@@ -172,6 +184,7 @@ const buildSketchSummary = (payload: AIGenerateRequest, mode: 'openai' | 'determ
 };
 
 export async function generateDrawCodeAI(payload: AIGenerateRequest): Promise<AIGenerationResult> {
+    const startedAt = Date.now();
     const faithful = buildFaithfulGenerationResult(payload);
     const notes: string[] = [];
     let semanticPage: SemanticPage;
@@ -193,17 +206,25 @@ export async function generateDrawCodeAI(payload: AIGenerateRequest): Promise<AI
     }
 
     const generated = generateCodeFromSemanticPage(semanticPage);
+    const recognizedShapes = recognizeShapesFromPayload(payload);
+    const shapeGenerated = generateCodeFromRecognizedShapes(recognizedShapes, payload.wrapperBounds);
+    const metrics = buildShapeMetrics(recognizedShapes, Date.now() - startedAt);
 
     return {
-        summary: buildSummary(semanticPage, mode),
+        summary: recognizedShapes.length > 0
+            ? buildShapeSummary(recognizedShapes.length, metrics.averageConfidence, mode)
+            : buildSummary(semanticPage, mode),
         interpretedSketch: buildSketchSummary(payload, mode),
-        preview: generated.preview,
+        preview: recognizedShapes.length > 0 ? shapeGenerated.preview : generated.preview,
         faithfulPreview: faithful.preview,
-        code: generated.code,
+        code: recognizedShapes.length > 0 ? shapeGenerated.code : generated.code,
+        recognizedShapes,
+        metrics,
         semanticPage,
         recommendations: [
-            'Saida principal gerada em React + CSS.',
-            'HTML, CSS e JS continuam disponiveis como export secundario.',
+            'Cada forma reconhecida foi transformada em um elemento individual editavel.',
+            'Saida principal gerada em React + CSS, com HTML/CSS/JS como export secundario.',
+            'Use o painel de treinamento para aceitar, rejeitar ou corrigir reconhecimentos.',
             'Revise textos e acessibilidade antes de publicar o site final.',
             mode === 'deterministic'
                 ? 'Adicione OPENAI_API_KEY para ativar a interpretacao por IA real.'

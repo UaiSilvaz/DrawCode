@@ -291,19 +291,8 @@ const buildReactCode = (html: string, css: string) => {
     ].join('\n');
 };
 
-const buildBackendCode = (projectName: string) => [
-    'export async function GET() {',
-    '  return Response.json({',
-    `    project: ${JSON.stringify(projectName)},`,
-    "    status: 'preview-only',",
-    "    message: 'Nenhum backend especifico foi inferido do layout atual.',",
-    '  });',
-    '}',
-].join('\n');
-
 export function buildFaithfulGenerationResult(payload: AIGenerateRequest): AIGenerationResult {
     const {
-        projectName,
         html,
         css,
         wrapperHtml,
@@ -342,7 +331,17 @@ export function buildFaithfulGenerationResult(payload: AIGenerateRequest): AIGen
             css: previewCss,
             js: '',
             react: buildReactCode(previewMarkup, previewCss),
-            backend: buildBackendCode(projectName),
+        },
+        recognizedShapes: [],
+        metrics: {
+            recognizedShapes: 0,
+            averageConfidence: 0,
+            processingTimeMs: 0,
+            freehandCount: 0,
+            lineCount: 0,
+            highConfidenceCount: 0,
+            mediumConfidenceCount: 0,
+            lowConfidenceCount: 0,
         },
         recommendations: [
             'O preview foi reconstruido 1:1 a partir do wrapper branco.',

@@ -12,7 +12,7 @@ export { useFileHandlers } from './useFileHandlers';
 export { useDragDropHandlers } from './useDragDropHandlers';
 // Mantém refs em sincronia com estados de páginas, zoom e snap.
 export { useSyncPageRefs } from './useSyncPageRefs';
-// Salva projeto no backend e atualiza status de persistência.
+// Salva projeto pelas rotas da aplicacao e atualiza status de persistencia.
 export { useSaveHandler } from './useSaveHandler';
 // Registra listeners globais/canvas para interação de mouse, wheel e teclado de navegação.
 export { useEditorEventListeners } from './useEditorEventListeners';

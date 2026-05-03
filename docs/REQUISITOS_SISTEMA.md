@@ -5,7 +5,7 @@ Base analisada: codigo-fonte, schema Prisma, rotas Next.js, telas, hooks do edit
 
 ## 1. Visao Geral
 
-O DrawCode e uma aplicacao web para criar paginas de front-end de forma visual. O sistema combina uma landing page publica, autenticacao de usuarios, dashboard de projetos e um editor visual baseado em GrapesJS. No editor, o usuario pode inserir blocos, desenhar formas, organizar paginas, salvar projetos, importar/exportar JSON e gerar um preview com codigo HTML, CSS, JS, React e backend placeholder.
+O DrawCode e uma aplicacao web para criar paginas de front-end de forma visual. O sistema combina uma landing page publica, autenticacao de usuarios, dashboard de projetos e um editor visual baseado em GrapesJS. No editor, o usuario pode inserir blocos, desenhar formas, organizar paginas, salvar projetos, importar/exportar JSON e gerar um preview com codigo React, CSS, HTML e JS.
 
 O objetivo principal do produto e tornar o aprendizado e a criacao de front-end mais simples, visual e acessivel para usuarios iniciantes ou criadores que desejam montar interfaces sem escrever codigo desde o inicio.
 
@@ -28,12 +28,15 @@ O objetivo principal do produto e tornar o aprendizado e a criacao de front-end 
 - Exportar e importar estrutura do projeto em JSON.
 - Fazer upload de imagem para um elemento de imagem selecionado.
 - Gerar preview e codigo a partir do conteudo do canvas.
+- Reconhecer formas desenhadas e converter cada forma em elemento React/HTML individual.
+- Editar formas geradas por IA com sincronizacao entre preview, codigo e painel.
+- Coletar feedback local de treinamento para aceitar, rejeitar ou corrigir reconhecimentos.
 - Manter modelo de dados de usuarios, contas, sessoes e projetos.
 
 ### 2.2 Fora do Escopo Atual ou Parcialmente Implementado
 
-- Geracao real com modelo de IA para reinterpretar o layout. A rota atual reconstrui o preview de forma deterministica.
-- Interpretacao inteligente de desenhos livres como componentes semanticos.
+- Fine-tuning real de modelo com base exportada. O sistema ja coleta exemplos locais, mas o treino externo ainda depende de dataset e quota.
+- Publicacao automatica do site gerado.
 - Publicacao/hospedagem do site criado pelo usuario.
 - Compartilhamento ou colaboracao em tempo real.
 - Exclusao, duplicacao persistida ou abertura por ID de projetos no dashboard.
@@ -215,19 +218,25 @@ Observacao sobre RF-037: a navegacao com `template` existe, mas nao foi localiza
 | RF-096 | A rota de geracao deve retornar resumo, interpretacao de desenho, preview, codigo e recomendacoes. | Implementado | Alta |
 | RF-097 | O editor deve exibir overlay de carregamento durante a geracao. | Implementado | Media |
 | RF-098 | O editor deve bloquear a edicao visual enquanto o preview gerado estiver sobre o canvas. | Implementado | Media |
-| RF-099 | O editor deve exibir abas de Preview, HTML, CSS, JS, React e Backend. | Implementado | Alta |
+| RF-099 | O editor deve exibir abas de Preview IA, Editor, Treinamento, React, CSS, HTML, JS, Semantica e Preview fiel. | Implementado | Alta |
 | RF-100 | O usuario deve poder fechar o painel de preview e voltar ao editor. | Implementado | Alta |
+| RF-101 | O sistema deve reconhecer formas como linhas, retangulos, circulos, triangulos, textos, botoes, inputs, imagens e containers. | Implementado | Alta |
+| RF-102 | Cada forma reconhecida deve virar um elemento individual no codigo gerado. | Implementado | Alta |
+| RF-103 | O usuario deve editar tipo, cor, tamanho e posicao das formas geradas. | Implementado | Alta |
+| RF-104 | Mudancas no editor da IA devem atualizar preview, HTML, CSS, JS e React em tempo real. | Implementado | Alta |
+| RF-105 | O sistema deve exibir metricas de formas reconhecidas, confianca media, tempo de processamento e acuracia revisada. | Implementado | Media |
+| RF-106 | O sistema deve salvar feedbacks de aceitar, rejeitar e corrigir no `localStorage` como base de treinamento. | Implementado | Media |
 
-Observacao importante: apesar do nome "Gerar com IA", a implementacao atual nao chama OpenAI nem AI SDK. Ela gera o resultado de forma deterministica a partir dos elementos capturados.
+Observacao importante: a geracao tenta usar OpenAI quando `OPENAI_API_KEY` esta configurada. Caso contrario, ou em caso de erro/quota, o sistema usa fallback deterministico e mantem reconhecimento, preview, codigo e treinamento local funcionando.
 
 ### 5.11 Dados do Usuario e Inicializacao
 
 | ID | Requisito | Status | Prioridade |
 | --- | --- | --- | --- |
-| RF-101 | O sistema deve fornecer endpoint `/api/users/me` para retornar dados do usuario autenticado. | Implementado | Media |
-| RF-102 | O endpoint `/api/users/me` deve retornar 401 quando nao houver usuario autenticado. | Implementado | Alta |
-| RF-103 | O sistema deve prover seed com usuario admin e usuario de teste. | Implementado | Baixa |
-| RF-104 | O sistema deve expor manifest PWA basico. | Implementado | Baixa |
+| RF-107 | O sistema deve fornecer endpoint `/api/users/me` para retornar dados do usuario autenticado. | Implementado | Media |
+| RF-108 | O endpoint `/api/users/me` deve retornar 401 quando nao houver usuario autenticado. | Implementado | Alta |
+| RF-109 | O sistema deve prover seed com usuario admin e usuario de teste. | Implementado | Baixa |
+| RF-110 | O sistema deve expor manifest PWA basico. | Implementado | Baixa |
 
 ## 6. Requisitos Nao Funcionais
 
@@ -272,7 +281,7 @@ Observacao importante: apesar do nome "Gerar com IA", a implementacao atual nao 
 | RN-012 | Provedores sociais so devem ser ativados se `CLIENT_ID` e `CLIENT_SECRET` correspondentes existirem. |
 | RN-013 | A geracao de preview deve considerar o wrapper branco como fonte principal da composicao. |
 | RN-014 | A geracao atual deve preservar fidelidade visual antes de tentar melhorar semanticamente o layout. |
-| RN-015 | O backend gerado pela funcionalidade de preview deve ser tratado como placeholder quando nao houver requisito backend inferido. |
+| RN-015 | A funcionalidade de preview deve gerar apenas codigo de interface; integracoes de dados devem ser implementadas separadamente nas rotas da aplicacao. |
 
 ## 8. Casos de Uso Textuais
 
@@ -400,15 +409,18 @@ Observacao importante: apesar do nome "Gerar com IA", a implementacao atual nao 
   3. Sistema captura wrapper branco e elementos filhos.
   4. Sistema envia snapshot para `/api/ai/generate`.
   5. API valida payload.
-  6. API reconstrui preview em HTML/CSS absoluto.
-  7. API retorna preview, codigo e recomendacoes.
-  8. Sistema exibe painel com abas Preview, HTML, CSS, JS, React e Backend.
-  9. Usuario fecha preview e volta ao editor.
+  6. API reconhece formas e reconstrui preview/codigo com elementos individuais.
+  7. API retorna preview, codigo, formas reconhecidas, metricas e recomendacoes.
+  8. Sistema exibe painel com abas Preview IA, Editor, Treinamento, React, CSS, HTML, JS, Semantica e Preview fiel.
+  9. Usuario edita tipo, cor, tamanho ou posicao de uma forma.
+  10. Sistema sincroniza preview e codigo em tempo real.
+  11. Usuario aceita, rejeita ou corrige reconhecimentos para treinar a base local.
+  12. Usuario fecha preview e volta ao editor.
 - Fluxos alternativos:
   - Editor indisponivel: sistema exibe erro.
   - Payload invalido: API retorna erro 400.
   - Falha interna: API retorna erro 500.
-- Pos-condicoes: preview e codigo ficam visiveis no editor.
+- Pos-condicoes: preview, codigo, metricas e exemplos locais de treinamento ficam disponiveis no editor.
 
 ### UC-08 - Fazer Logout
 
@@ -535,8 +547,8 @@ Representa um projeto visual salvo.
 | Paginas do editor | RF-070 a RF-073 | `src/screens/Grape/web-builder/WebBuilderScreen.tsx`, `src/screens/Grape/web-builder/hooks/useCanvasSync.ts` |
 | Persistencia | RF-074 a RF-081 | `src/screens/Grape/web-builder/hooks/useSaveHandler.ts`, `src/app/api/grape/save/route.ts`, `prisma/schema.prisma` |
 | Import/export/upload | RF-082 a RF-088 | `src/screens/Grape/web-builder/hooks/useFileHandlers.ts`, `src/screens/Grape/builder-blocks/BuilderToolbar.tsx` |
-| Geracao de preview | RF-089 a RF-100 | `src/app/api/ai/generate/route.ts`, `src/screens/Grape/builder-blocks/BuilderCanvasArea.tsx`, `AI_BUILDER_REPORT.md` |
-| Dados do usuario | RF-101 a RF-104 | `src/app/api/users/me/route.ts`, `prisma/seed.ts`, `public/manifest.json` |
+| Geracao de preview | RF-089 a RF-106 | `src/app/api/ai/generate/route.ts`, `src/screens/Grape/builder-blocks/BuilderCanvasArea.tsx`, `src/screens/Grape/builder-blocks/AIPreviewPanel.tsx` |
+| Dados do usuario | RF-107 a RF-110 | `src/app/api/users/me/route.ts`, `prisma/seed.ts`, `public/manifest.json` |
 
 ## 12. Requisitos de Validacao e Criterios de Aceite
 
@@ -557,10 +569,12 @@ Representa um projeto visual salvo.
 | CA-013 | "Gerar com IA" retorna painel com preview e abas de codigo. |
 | CA-014 | O preview gerado usa posicoes relativas ao wrapper branco e nao ao body inteiro. |
 | CA-015 | A rota de geracao rejeita payload invalido com erro 400. |
+| CA-016 | O editor de IA permite mudar tipo, cor, tamanho e posicao de uma forma e atualiza o preview. |
+| CA-017 | O painel de treinamento registra feedback local em `localStorage`. |
 
 ## 13. Riscos, Limitacoes e Pendencias
 
-- O nome "Gerar com IA" pode criar expectativa incorreta, pois a geracao atual e deterministica.
+- A chamada OpenAI depende de quota e variaveis de ambiente; sem isso, o fallback deterministico e usado.
 - O rate limit de cadastro e em memoria, portanto nao e adequado para ambiente distribuido ou serverless em escala.
 - `AUTH_SECRET` possui fallback inseguro no codigo e deve ser obrigatorio em producao.
 - A tela administrativa esta protegida, mas nao existe modulo administrativo completo.
@@ -577,8 +591,8 @@ Representa um projeto visual salvo.
 1. Criar requisito de abertura de projeto por ID a partir do dashboard.
 2. Criar requisito de exclusao e renomeacao de projeto no dashboard.
 3. Criar requisito de aplicacao real de templates ao abrir `/grape?template=...`.
-4. Separar "preview fiel" de "aprimoramento com IA real".
-5. Criar rota `/api/ai/enhance-layout` para interpretacao semantica e melhoria de componentes.
+4. Transformar os exemplos de treinamento local em dataset JSONL validado.
+5. Criar rotina de avaliacoes para comparar prompt, fallback e futuro fine-tuning.
 6. Criar requisito de publicacao/exportacao completa do site criado.
 7. Criar envio real do formulario de contato.
 8. Criar recuperacao de senha e verificacao de email.
@@ -594,4 +608,5 @@ Representa um projeto visual salvo.
 - Schema do canvas: representacao JSON simplificada dos elementos visuais.
 - Projeto Grape: projeto salvo no banco com dados do editor.
 - Preview fiel: reconstrucao visual baseada em posicoes, tamanhos e estilos do canvas.
-- IA real: uso futuro de modelo para interpretar desenhos, gerar componentes semanticos e melhorar codigo.
+- IA real: uso de modelo para interpretar desenhos, gerar componentes semanticos e melhorar codigo.
+- Base de treinamento: exemplos salvos localmente com previsao da IA e correcao do usuario.

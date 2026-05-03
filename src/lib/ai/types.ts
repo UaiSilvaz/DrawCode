@@ -60,7 +60,61 @@ export interface GeneratedCodeBundle {
     css: string;
     js: string;
     react: string;
-    backend: string;
+}
+
+export type RecognizedShapeKind =
+    | 'rectangle'
+    | 'circle'
+    | 'line'
+    | 'triangle'
+    | 'freehand'
+    | 'text'
+    | 'button'
+    | 'input'
+    | 'image'
+    | 'container';
+
+export interface RecognizedShape {
+    id: string;
+    sourceElementId: string;
+    sourceType: string;
+    kind: RecognizedShapeKind;
+    label: string;
+    htmlTag: 'div' | 'button' | 'input' | 'img' | 'p';
+    confidence: number;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    color: string;
+    text: string;
+    borderRadius: number;
+    rotation: number;
+    opacity: number;
+    zIndex: number;
+}
+
+export interface AIGenerationMetrics {
+    recognizedShapes: number;
+    averageConfidence: number;
+    processingTimeMs: number;
+    freehandCount: number;
+    lineCount: number;
+    highConfidenceCount: number;
+    mediumConfidenceCount: number;
+    lowConfidenceCount: number;
+}
+
+export interface AITrainingFeedbackRecord {
+    id: string;
+    shapeId: string;
+    detectedKind: RecognizedShapeKind;
+    correctedKind: RecognizedShapeKind;
+    action: 'accepted' | 'rejected' | 'corrected';
+    confidence: number;
+    shape: RecognizedShape;
+    createdAt: string;
+    generationMode: 'openai' | 'deterministic';
 }
 
 export interface PreviewBundle {
@@ -75,6 +129,8 @@ export interface AIGenerationResult {
     preview: PreviewBundle;
     faithfulPreview?: PreviewBundle;
     code: GeneratedCodeBundle;
+    recognizedShapes: RecognizedShape[];
+    metrics: AIGenerationMetrics;
     recommendations: string[];
     semanticPage?: SemanticPage;
     generation: {

@@ -873,12 +873,37 @@
     animation-delay: 0.75s;
 }
 
+.draw-ai-progress {
+    width: 100%;
+    height: 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(167, 139, 250, 0.28);
+    background: rgba(15, 23, 42, 0.62);
+    overflow: hidden;
+}
+
+.draw-ai-progress span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #22d3ee, #a855f7, #f472b6);
+    box-shadow: 0 0 22px rgba(244, 114, 182, 0.38);
+    transition: width 0.35s ease;
+}
+
+.draw-ai-progress-label {
+    color: rgba(226, 232, 240, 0.78);
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
 .draw-ai-preview-shell {
     width: 100%;
     height: 100%;
     display: grid;
-    grid-template-rows: auto auto 1fr;
-    gap: 14px;
+    grid-template-rows: auto auto auto 1fr auto;
+    gap: 10px;
+    position: relative;
 }
 
 .draw-ai-preview-head {
@@ -928,6 +953,39 @@
     border-color: rgba(251, 191, 36, 0.42);
     color: #fef3c7;
     background: rgba(146, 64, 14, 0.18);
+}
+
+.draw-ai-preview-badges,
+.draw-ai-status-row,
+.draw-ai-status-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.draw-ai-preview-badge.is-success {
+    border-color: rgba(52, 211, 153, 0.45);
+    color: #d1fae5;
+    background: rgba(5, 150, 105, 0.16);
+}
+
+.draw-ai-status-row {
+    padding: 0 20px;
+}
+
+.draw-ai-status-row span,
+.draw-ai-status-footer span {
+    min-height: 28px;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    border: 1px solid rgba(167, 139, 250, 0.22);
+    background: rgba(15, 23, 42, 0.38);
+    color: rgba(248, 250, 252, 0.82);
+    padding: 0 10px;
+    font-size: 0.72rem;
+    font-weight: 800;
 }
 
 .draw-ai-preview-close {
@@ -1000,12 +1058,348 @@
     line-height: 1.6;
 }
 
+.draw-ai-editor {
+    height: 100%;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(280px, 0.9fr) minmax(320px, 1.1fr);
+    gap: 14px;
+}
+
+.draw-ai-shape-list,
+.draw-ai-shape-editor,
+.draw-ai-training {
+    min-height: 0;
+    border-radius: 18px;
+    border: 1px solid rgba(167, 139, 250, 0.26);
+    background: rgba(8, 8, 18, 0.72);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.draw-ai-shape-list,
+.draw-ai-shape-editor {
+    padding: 14px;
+}
+
+.draw-ai-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.draw-ai-section-head strong {
+    color: #ffffff;
+    font-size: 0.9rem;
+}
+
+.draw-ai-mini-btn {
+    height: 30px;
+    border-radius: 10px;
+    border: 1px solid rgba(167, 139, 250, 0.28);
+    background: rgba(17, 12, 34, 0.78);
+    color: #f8fafc;
+    padding: 0 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+.draw-ai-shape-items {
+    max-height: calc(100% - 42px);
+    overflow: auto;
+    display: grid;
+    gap: 8px;
+    padding-right: 2px;
+}
+
+.draw-ai-shape-item {
+    width: 100%;
+    min-height: 66px;
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    border-radius: 14px;
+    border: 1px solid rgba(167, 139, 250, 0.2);
+    background: rgba(17, 12, 34, 0.68);
+    color: #f8fafc;
+    padding: 10px;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.draw-ai-shape-item:hover,
+.draw-ai-shape-item.is-active {
+    transform: translateY(-1px);
+    border-color: rgba(244, 114, 182, 0.58);
+    background: rgba(44, 22, 74, 0.78);
+}
+
+.draw-ai-shape-item.is-accepted {
+    border-color: rgba(52, 211, 153, 0.46);
+}
+
+.draw-ai-shape-item.is-rejected {
+    border-color: rgba(248, 113, 113, 0.5);
+}
+
+.draw-ai-shape-item.is-corrected {
+    border-color: rgba(34, 211, 238, 0.5);
+}
+
+.draw-ai-shape-swatch {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+}
+
+.draw-ai-shape-kind-circle {
+    border-radius: 999px;
+}
+
+.draw-ai-shape-kind-line {
+    height: 5px;
+    align-self: center;
+    border-radius: 999px;
+}
+
+.draw-ai-shape-kind-triangle {
+    clip-path: polygon(50% 0%, 0 100%, 100% 100%);
+}
+
+.draw-ai-shape-kind-text {
+    border-style: dashed;
+    background: transparent !important;
+}
+
+.draw-ai-shape-item strong,
+.draw-ai-shape-item small {
+    display: block;
+}
+
+.draw-ai-shape-item strong {
+    font-size: 0.8rem;
+}
+
+.draw-ai-shape-item small {
+    margin-top: 4px;
+    color: rgba(221, 214, 254, 0.72);
+    font-size: 0.69rem;
+}
+
+.draw-ai-confidence {
+    min-width: 48px;
+    min-height: 26px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 8px;
+    font-size: 0.68rem;
+    font-style: normal;
+    font-weight: 900;
+}
+
+.draw-ai-confidence.is-high {
+    color: #d1fae5;
+    background: rgba(16, 185, 129, 0.18);
+    border: 1px solid rgba(52, 211, 153, 0.34);
+}
+
+.draw-ai-confidence.is-medium {
+    color: #fef3c7;
+    background: rgba(217, 119, 6, 0.18);
+    border: 1px solid rgba(251, 191, 36, 0.34);
+}
+
+.draw-ai-confidence.is-low {
+    color: #fecaca;
+    background: rgba(220, 38, 38, 0.18);
+    border: 1px solid rgba(248, 113, 113, 0.34);
+}
+
+.draw-ai-controls-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.draw-ai-controls-grid label {
+    display: grid;
+    gap: 6px;
+    color: rgba(233, 213, 255, 0.78);
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+.draw-ai-controls-grid input,
+.draw-ai-controls-grid select {
+    width: 100%;
+    min-height: 38px;
+    border-radius: 11px;
+    border: 1px solid rgba(167, 139, 250, 0.28);
+    background: rgba(15, 23, 42, 0.64);
+    color: #ffffff;
+    padding: 0 10px;
+    font: inherit;
+}
+
+.draw-ai-controls-grid input[type="color"] {
+    padding: 4px;
+}
+
+.draw-ai-feedback-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+}
+
+.draw-ai-feedback-btn {
+    min-height: 36px;
+    border-radius: 11px;
+    border: 1px solid rgba(167, 139, 250, 0.26);
+    background: rgba(17, 12, 34, 0.78);
+    color: #f8fafc;
+    padding: 0 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    cursor: pointer;
+    font-size: 0.74rem;
+    font-weight: 900;
+}
+
+.draw-ai-feedback-btn.is-accept {
+    border-color: rgba(52, 211, 153, 0.42);
+    color: #d1fae5;
+    background: rgba(5, 150, 105, 0.16);
+}
+
+.draw-ai-feedback-btn.is-reject {
+    border-color: rgba(248, 113, 113, 0.42);
+    color: #fecaca;
+    background: rgba(185, 28, 28, 0.16);
+}
+
+.draw-ai-feedback-btn.is-correct {
+    border-color: rgba(34, 211, 238, 0.42);
+    color: #cffafe;
+    background: rgba(8, 145, 178, 0.16);
+}
+
+.draw-ai-sync-note {
+    margin-top: 16px;
+    border-radius: 13px;
+    border: 1px solid rgba(34, 211, 238, 0.22);
+    background: rgba(8, 145, 178, 0.11);
+    color: rgba(207, 250, 254, 0.9);
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.76rem;
+    font-weight: 800;
+}
+
+.draw-ai-empty {
+    margin: 0;
+    color: rgba(233, 213, 255, 0.78);
+    font-size: 0.82rem;
+}
+
+.draw-ai-training {
+    height: 100%;
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    gap: 12px;
+    padding: 14px;
+}
+
+.draw-ai-training-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.draw-ai-training-grid article {
+    min-height: 82px;
+    border-radius: 14px;
+    border: 1px solid rgba(167, 139, 250, 0.22);
+    background: rgba(17, 12, 34, 0.72);
+    padding: 12px;
+    display: grid;
+    align-content: center;
+    gap: 6px;
+}
+
+.draw-ai-training-grid strong {
+    color: #ffffff;
+    font-size: 1.4rem;
+}
+
+.draw-ai-training-grid span {
+    color: rgba(221, 214, 254, 0.74);
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+.draw-ai-training-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.draw-ai-training-jsonl {
+    min-height: 0;
+}
+
+.draw-ai-status-footer {
+    padding: 0 20px 16px;
+}
+
+.draw-ai-local-toast {
+    position: absolute;
+    right: 22px;
+    bottom: 20px;
+    z-index: 5;
+    border-radius: 13px;
+    border: 1px solid rgba(52, 211, 153, 0.38);
+    background: rgba(6, 78, 59, 0.92);
+    color: #d1fae5;
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.35);
+    padding: 10px 14px;
+    font-size: 0.78rem;
+    font-weight: 900;
+    animation: draw-ai-toast-in 0.2s ease both;
+}
+
 @keyframes draw-ai-spin {
     from {
         transform: rotate(0deg);
     }
     to {
         transform: rotate(360deg);
+    }
+}
+
+@keyframes draw-ai-toast-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
