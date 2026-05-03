@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import 'grapesjs/dist/css/grapes.min.css';
 import '../ui.css';
 import { type DockItemData } from '@/components/Dock';
@@ -9,7 +9,7 @@ import BuilderToolbar from '../builder-blocks/BuilderToolbar';
 import BuilderElementsSidebar from '../builder-blocks/BuilderElementsSidebar';
 import BuilderCanvasArea from '../builder-blocks/BuilderCanvasArea';
 import BuilderContextMenu from '../builder-blocks/BuilderContextMenu';
-import type { DrawToolId } from '../builder-blocks/types';
+import type { CanvasDeviceMode, DrawToolId, QuickEditAction } from '../builder-blocks/types';
 import type { RecognizedShape, RecognizedShapeKind } from '@/lib/ai/types';
 import {
     PAGE_HEIGHT,
@@ -131,6 +131,22 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
     const { groupedSidebar, activeGroup } = useSidebarGroups(sidebarBlocks, activeGroupId);
     const drawStrokeRef = useRef<DrawStrokeSession | null>(null);
     const drawModeActive = leftPanelMode === 'draw';
+    const [hasSelectedComponent, setHasSelectedComponent] = useState(false);
+    const [deviceMode, setDeviceMode] = useState<CanvasDeviceMode>('desktop');
+
+    const getSelectedComponent = useCallback((): AnyComponent | null => {
+        if (!editor) return null;
+        const maybeEditor = editor as unknown as { getSelected?: () => unknown };
+        return (maybeEditor.getSelected?.() ?? null) as AnyComponent | null;
+    }, [editor]);
+
+    const applyDeviceMode = useCallback((mode: CanvasDeviceMode) => {
+        setDeviceMode(mode);
+        if (!editor) return;
+        const targetDevice = mode === 'desktop' ? 'Desktop' : mode === 'tablet' ? 'Tablet' : 'Phone';
+        const maybeEditor = editor as unknown as { setDevice?: (name: string) => void };
+        maybeEditor.setDevice?.(targetDevice);
+    }, [editor]);
 
     const clonePayload = useCallback((payload: unknown) => {
         if (payload == null) return payload;
@@ -527,6 +543,33 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
         setContextMenu((prev) => ({ ...prev, open: false }));
     }, [setContextMenu]);
 
+    const normalizePagePath = useCallback((value: string, fallback = '/page') => {
+        const baseFallback = fallback.startsWith('/') ? fallback : `/${fallback}`;
+        const cleanedRaw = value.trim().toLowerCase();
+        const cleaned = cleanedRaw
+            .replace(/\s+/g, '-')
+            .replace(/[^a-z0-9/_-]/g, '')
+            .replace(/\/{2,}/g, '/');
+        let next = cleaned.startsWith('/') ? cleaned : `/${cleaned}`;
+        if (next.length > 1) next = next.replace(/\/+$/g, '');
+        if (!next || next === '/') return baseFallback;
+        return next;
+    }, []);
+
+    const makeUniquePagePath = useCallback((path: string, existingPaths: string[]) => {
+        const normalizedSet = new Set(existingPaths.map((entry) => normalizePagePath(entry)));
+        const normalizedPath = normalizePagePath(path);
+        if (!normalizedSet.has(normalizedPath)) return normalizedPath;
+
+        let suffix = 2;
+        let candidate = `${normalizedPath}-${suffix}`;
+        while (normalizedSet.has(candidate)) {
+            suffix += 1;
+            candidate = `${normalizedPath}-${suffix}`;
+        }
+        return candidate;
+    }, [normalizePagePath]);
+
     const handleSelectPage = useCallback((targetIndex: number) => {
         if (!editor) return;
         if (targetIndex < 0 || targetIndex >= pagesRef.current.length) return;
@@ -548,9 +591,12 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
 
         const snapshotPages = snapshotCurrentPage() ?? pagesRef.current;
         const nextIndex = snapshotPages.length;
+        const defaultPath = nextIndex === 0 ? '/home' : `/page-${nextIndex + 1}`;
+        const nextPath = makeUniquePagePath(defaultPath, snapshotPages.map((page) => page.name));
+
         const newPage: CanvasPage = {
             id: `page-${Date.now()}-${nextIndex + 1}`,
-            name: `Pagina ${nextIndex + 1}`,
+            name: nextPath,
             components: [],
             styles: [],
             schema: [],
@@ -562,7 +608,29 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
         activePageIndexRef.current = nextIndex;
         setActivePageIndex(nextIndex);
         applyPageToCanvas(newPage);
-    }, [editor, snapshotCurrentPage, pagesRef, activePageIndexRef, setPages, setActivePageIndex, applyPageToCanvas]);
+    }, [editor, snapshotCurrentPage, pagesRef, setPages, activePageIndexRef, setActivePageIndex, makeUniquePagePath, applyPageToCanvas]);
+
+    const handleRenamePage = useCallback((pageId: string, nextPathInput: string) => {
+        const pageIndex = pagesRef.current.findIndex((page) => page.id === pageId);
+        if (pageIndex < 0) return;
+
+        const existingPaths = pagesRef.current
+            .filter((page) => page.id !== pageId)
+            .map((page) => page.name);
+        const normalized = normalizePagePath(nextPathInput, `/page-${pageIndex + 1}`);
+        const uniquePath = makeUniquePagePath(normalized, existingPaths);
+
+        const nextPages = [...pagesRef.current];
+        const currentPage = nextPages[pageIndex];
+        if (!currentPage) return;
+
+        nextPages[pageIndex] = {
+            ...currentPage,
+            name: uniquePath,
+        };
+        pagesRef.current = nextPages;
+        setPages(nextPages);
+    }, [makeUniquePagePath, normalizePagePath, pagesRef, setPages]);
 
     const captureCanvasSnapshot = useCallback(() => {
         if (!editor) {
@@ -901,17 +969,103 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
         setSaveMsg,
     ]);
 
+    const handleApplyQuickEdit = useCallback((action: QuickEditAction) => {
+        if (!editor) return;
+
+        const selected = getSelectedComponent();
+        if (!selected) {
+            setSaveMsg('Selecione um elemento para usar a edicao rapida.');
+            setTimeout(() => setSaveMsg(''), 1800);
+            return;
+        }
+
+        const currentStyle = (selected.getStyle?.() ?? {}) as Record<string, string | number | undefined>;
+        const nextStyle: Record<string, string | number | undefined> = { ...currentStyle };
+        const currentWidth = Math.max(48, parseFloat(String(currentStyle.width ?? '220').replace('px', '')) || 220);
+        const currentHeight = Math.max(48, parseFloat(String(currentStyle.height ?? '120').replace('px', '')) || 120);
+
+        if (action === 'color-violet') nextStyle['background-color'] = '#7c3aed';
+        if (action === 'color-blue') nextStyle['background-color'] = '#2563eb';
+        if (action === 'color-rose') nextStyle['background-color'] = '#ec4899';
+        if (action === 'color-neutral') nextStyle['background-color'] = '#334155';
+
+        if (action === 'shape-square') {
+            nextStyle['border-radius'] = '12px';
+        }
+
+        if (action === 'shape-circle') {
+            const size = Math.max(currentWidth, currentHeight);
+            nextStyle.width = `${Math.round(size)}px`;
+            nextStyle.height = `${Math.round(size)}px`;
+            nextStyle['border-radius'] = '999px';
+        }
+
+        if (action === 'shape-pill') {
+            nextStyle['border-radius'] = '999px';
+        }
+
+        if (action === 'align-center') {
+            nextStyle.display = 'flex';
+            nextStyle['align-items'] = 'center';
+            nextStyle['justify-content'] = 'center';
+            nextStyle['text-align'] = 'center';
+        }
+
+        if (action === 'border-none') {
+            nextStyle.border = '0';
+            nextStyle['border-width'] = '0';
+        }
+
+        selected.setStyle(nextStyle as Record<string, string | number>);
+        syncCanvasSchema(editor);
+        setSaveMsg('Edicao rapida aplicada.');
+        setTimeout(() => setSaveMsg(''), 1500);
+    }, [editor, getSelectedComponent, setSaveMsg, syncCanvasSchema]);
+
+    useEffect(() => {
+        if (!editor) {
+            setHasSelectedComponent(false);
+            return;
+        }
+
+        const refreshSelection = () => setHasSelectedComponent(Boolean(getSelectedComponent()));
+        const eventsApi = editor as unknown as {
+            on: (name: string, callback: () => void) => void;
+            off: (name: string, callback: () => void) => void;
+        };
+
+        refreshSelection();
+        eventsApi.on('component:selected', refreshSelection);
+        eventsApi.on('component:deselected', refreshSelection);
+        eventsApi.on('component:remove', refreshSelection);
+
+        return () => {
+            eventsApi.off('component:selected', refreshSelection);
+            eventsApi.off('component:deselected', refreshSelection);
+            eventsApi.off('component:remove', refreshSelection);
+        };
+    }, [editor, getSelectedComponent]);
+
     // Sync page refs
     useSyncPageRefs(pages, pagesRef, activePageIndex, activePageIndexRef, zoomLevel, zoomRef, snapEnabled, snapRef);
     // Initialize editor on mount
     useEffect(() => {
         const instance = initializeGrapesJS(snapRef, setSidebarBlocks, applyCanvasBackdrop, syncCanvasSchema);
         setEditor(instance);
+        const maybeEditor = instance as unknown as { setDevice?: (name: string) => void };
+        maybeEditor.setDevice?.('Desktop');
         return () => {
             instance.destroy();
             setEditor(null);
         };
     }, [applyCanvasBackdrop, syncCanvasSchema, setSidebarBlocks, setEditor, snapRef]);
+
+    useEffect(() => {
+        if (!editor) return;
+        const targetDevice = deviceMode === 'desktop' ? 'Desktop' : deviceMode === 'tablet' ? 'Tablet' : 'Phone';
+        const maybeEditor = editor as unknown as { setDevice?: (name: string) => void };
+        maybeEditor.setDevice?.(targetDevice);
+    }, [editor, deviceMode]);
 
     // Apply canvas backdrop when snap changes
     useEffect(() => {
@@ -1140,6 +1294,7 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
                 propertiesActive={leftPanelMode === 'properties'}
                 drawActive={leftPanelMode === 'draw'}
                 activeDrawTool={activeDrawTool}
+                hasSelectedComponent={hasSelectedComponent}
                 onCollapse={() => setLeftSidebarCollapsed(true)}
                 onSelectGroup={(groupId) => {
                     setActiveGroupId(groupId);
@@ -1159,12 +1314,14 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
                     setLeftSidebarCollapsed(false);
                     setLeftPanelMode('properties');
                 }}
+                onApplyQuickEdit={handleApplyQuickEdit}
                 onInsertBlock={handleInsertBlock}
                 onBlockDragStart={handleBlockDragStart}
             />
 
             <BuilderCanvasArea
                 canvasShellRef={canvasShellRef}
+                deviceMode={deviceMode}
                 snapEnabled={snapEnabled}
                 isPanning={isPanning}
                 zoomLevel={zoomLevel}
@@ -1180,6 +1337,8 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
                 activePageIndex={activePageIndex}
                 onCreatePage={handleCreatePage}
                 onSelectPage={handleSelectPage}
+                onRenamePage={handleRenamePage}
+                onChangeDeviceMode={applyDeviceMode}
                 aiGenerating={aiGenerating}
             />
 

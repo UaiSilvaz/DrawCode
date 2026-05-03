@@ -6,7 +6,7 @@ export function useCanvasHandlers(editor: EditorInstance | null, zoomRef: React.
     if (!editor) return;
     const canvasApi = (editor as { Canvas?: { setZoom?: (value: number) => void } }).Canvas;
     if (!canvasApi?.setZoom) return;
-    const clamped = Math.max(30, Math.min(200, Math.round(next)));
+    const clamped = Math.max(20, Math.min(300, Math.round(next)));
     if (clamped === zoomRef.current) return;
     zoomRef.current = clamped;
     canvasApi.setZoom(clamped);

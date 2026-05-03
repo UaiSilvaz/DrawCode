@@ -2,6 +2,7 @@ import type { DragEvent } from 'react';
 import {
     Boxes,
     Circle,
+    ChevronLeft,
     Image as ImageIcon,
     LayoutTemplate,
     MousePointer2,
@@ -14,7 +15,13 @@ import {
     Triangle,
     Type,
 } from 'lucide-react';
-import type { DrawToolId, SidebarBlockItem, SidebarGroupWithBlocks, SidebarIcon } from './types';
+import type {
+    DrawToolId,
+    QuickEditAction,
+    SidebarBlockItem,
+    SidebarGroupWithBlocks,
+    SidebarIcon,
+} from './types';
 
 interface BuilderElementsSidebarProps {
     leftSidebarCollapsed: boolean;
@@ -27,9 +34,11 @@ interface BuilderElementsSidebarProps {
     propertiesActive: boolean;
     drawActive: boolean;
     activeDrawTool: DrawToolId;
+    hasSelectedComponent: boolean;
     onToggleProperties: () => void;
     onToggleDraw: () => void;
     onSelectDrawTool: (toolId: DrawToolId) => void;
+    onApplyQuickEdit: (action: QuickEditAction) => void;
     onInsertBlock: (item: SidebarBlockItem) => void;
     onBlockDragStart: (item: SidebarBlockItem, event: DragEvent<HTMLButtonElement>) => void;
 }
@@ -53,6 +62,21 @@ const renderDrawToolIcon = (toolId: DrawToolId) => {
 };
 
 const isShapeTool = (toolId: DrawToolId) => ['square', 'circle', 'triangle'].includes(toolId);
+
+const QUICK_COLORS: Array<{ id: QuickEditAction; label: string; color: string }> = [
+    { id: 'color-violet', label: 'Roxo', color: '#7c3aed' },
+    { id: 'color-blue', label: 'Azul', color: '#2563eb' },
+    { id: 'color-rose', label: 'Rosa', color: '#ec4899' },
+    { id: 'color-neutral', label: 'Cinza', color: '#334155' },
+];
+
+const QUICK_ACTIONS: Array<{ id: QuickEditAction; label: string }> = [
+    { id: 'shape-square', label: 'Quadrado' },
+    { id: 'shape-circle', label: 'Circulo' },
+    { id: 'shape-pill', label: 'Capsula' },
+    { id: 'align-center', label: 'Centralizar' },
+    { id: 'border-none', label: 'Sem borda' },
+];
 
 function DrawToolsPanel({
     activeDrawTool,
@@ -163,9 +187,11 @@ export default function BuilderElementsSidebar({
     propertiesActive,
     drawActive,
     activeDrawTool,
+    hasSelectedComponent,
     onToggleProperties,
     onToggleDraw,
     onSelectDrawTool,
+    onApplyQuickEdit,
     onInsertBlock,
     onBlockDragStart,
 }: BuilderElementsSidebarProps) {
@@ -177,8 +203,8 @@ export default function BuilderElementsSidebar({
         <aside className={`draw-sidebar ${leftSidebarCollapsed ? 'is-collapsed' : ''}`}>
             <div className="draw-sidebar-icons">
                 {!leftSidebarCollapsed && (
-                    <button type="button" className="draw-side-toggle draw-icon-collapse" onClick={onCollapse}>
-                        {'<'}
+                    <button type="button" className="draw-side-toggle draw-icon-collapse" onClick={onCollapse} aria-label="Recolher painel" title="Recolher painel">
+                        <ChevronLeft size={18} />
                     </button>
                 )}
                 {groupedSidebar.map((group) => (
@@ -187,6 +213,8 @@ export default function BuilderElementsSidebar({
                         type="button"
                         className={`draw-group-icon ${!drawActive && activeGroup?.id === group.id ? 'is-active' : ''}`}
                         onClick={() => onSelectGroup(group.id)}
+                        aria-label={group.label}
+                        title={group.label}
                     >
                         {renderGroupIcon(group.icon)}
                     </button>
@@ -204,6 +232,8 @@ export default function BuilderElementsSidebar({
                     type="button"
                     className={`draw-group-icon ${propertiesActive ? 'is-active' : ''}`}
                     onClick={onToggleProperties}
+                    aria-label="Propriedades"
+                    title="Propriedades"
                 >
                     <Settings size={18} />
                 </button>
@@ -234,12 +264,44 @@ export default function BuilderElementsSidebar({
                 </div>
 
                 <div className={`draw-props-list ${propertiesActive ? '' : 'is-hidden'}`}>
-                    <section className="draw-side-section">
+                    <section className="draw-side-section draw-quick-section">
                         <h3>Edicao Rapida</h3>
+                        <div className="draw-quick-palette">
+                            {QUICK_COLORS.map((entry) => (
+                                <button
+                                    key={entry.id}
+                                    type="button"
+                                    className="draw-quick-color"
+                                    style={{ backgroundColor: entry.color }}
+                                    onClick={() => onApplyQuickEdit(entry.id)}
+                                    disabled={!hasSelectedComponent}
+                                    aria-label={entry.label}
+                                    title={entry.label}
+                                />
+                            ))}
+                        </div>
+                        <div className="draw-quick-actions">
+                            {QUICK_ACTIONS.map((entry) => (
+                                <button
+                                    key={entry.id}
+                                    type="button"
+                                    className="draw-quick-action"
+                                    onClick={() => onApplyQuickEdit(entry.id)}
+                                    disabled={!hasSelectedComponent}
+                                >
+                                    {entry.label}
+                                </button>
+                            ))}
+                        </div>
+                        <p className="draw-quick-hint">
+                            {hasSelectedComponent
+                                ? 'Clique em uma acao para aplicar no elemento selecionado.'
+                                : 'Selecione um elemento no canvas para liberar a edicao rapida.'}
+                        </p>
                         <div id="styles" />
                     </section>
                     <details className="draw-side-section draw-props-advanced">
-                        <summary>Opcoes Avancadas</summary>
+                        <summary>Mais Opcoes</summary>
                         <div className="draw-props-advanced-body">
                             <h4>Atributos</h4>
                             <div id="traits" />

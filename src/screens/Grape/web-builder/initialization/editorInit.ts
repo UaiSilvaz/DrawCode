@@ -18,6 +18,28 @@ export function initializeGrapesJS(
     storageManager: false,
     dragMode: 'absolute',
     selectorManager: { componentFirst: true },
+    devicePreviewMode: true,
+    deviceManager: {
+      devices: [
+        {
+          id: 'Desktop',
+          name: 'Desktop',
+          width: '',
+        },
+        {
+          id: 'Tablet',
+          name: 'Tablet',
+          width: '900px',
+          widthMedia: '900px',
+        },
+        {
+          id: 'Phone',
+          name: 'Phone',
+          width: '390px',
+          widthMedia: '390px',
+        },
+      ],
+    },
     panels: { defaults: [] },
     blockManager: {},
     styleManager: {
@@ -29,24 +51,19 @@ export function initializeGrapesJS(
           properties: ['background-color', 'color', 'opacity', 'border-radius'],
         },
         {
-          name: 'Tamanho',
+          name: 'Tamanho e Posicao',
           open: true,
-          properties: ['width', 'height'],
-        },
-        {
-          name: 'Posicao',
-          open: true,
-          properties: ['left', 'top'],
+          properties: ['width', 'height', 'left', 'top'],
         },
         {
           name: 'Texto',
           open: false,
-          properties: ['font-size', 'font-weight', 'text-align'],
+          properties: ['font-size', 'text-align'],
         },
         {
           name: 'Borda',
           open: false,
-          properties: ['border-width', 'border-style', 'border-color'],
+          properties: ['border-width', 'border-color'],
         },
       ],
     },

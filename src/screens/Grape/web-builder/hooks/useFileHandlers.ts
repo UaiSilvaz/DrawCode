@@ -12,6 +12,18 @@ export function useFileHandlers(
   setSaveMsg: (msg: string) => void,
   syncCanvasSchema: (instance: EditorInstance) => void,
 ) {
+  const normalizePagePath = (value: string, fallback: string) => {
+    const cleaned = value
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9/_-]/g, '')
+      .replace(/\/{2,}/g, '/');
+    const prefixed = cleaned.startsWith('/') ? cleaned : `/${cleaned}`;
+    const withoutTrailing = prefixed.length > 1 ? prefixed.replace(/\/+$/g, '') : prefixed;
+    return withoutTrailing && withoutTrailing !== '/' ? withoutTrailing : fallback;
+  };
+
   const buildExportPayload = useCallback((pagesRef: React.MutableRefObject<CanvasPage[]>, activePageIndexRef: React.MutableRefObject<number>) => {
     if (!editor) return null;
     const schema = serializeCanvas(editor);
@@ -68,7 +80,7 @@ export function useFileHandlers(
         if (Array.isArray(parsed?.pages) && parsed.pages.length > 0) {
           const safePages = parsed.pages.map((page, index) => ({
             id: page.id || `page-${index + 1}`,
-            name: page.name || `Pagina ${index + 1}`,
+            name: normalizePagePath(String(page.name || ''), index === 0 ? '/home' : `/page-${index + 1}`),
             components: Array.isArray(page.components) ? page.components : [],
             styles: page.styles ?? [],
             schema: Array.isArray(page.schema) ? page.schema : [],
@@ -90,7 +102,7 @@ export function useFileHandlers(
           importSchema(nodes);
           const singlePage: CanvasPage = {
             id: 'page-1',
-            name: 'Pagina 1',
+            name: '/home',
             components: nodes.map(nodeToComponent),
             styles: editor?.getStyle() ?? [],
             schema: nodes,

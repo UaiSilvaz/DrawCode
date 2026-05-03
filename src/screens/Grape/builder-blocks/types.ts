@@ -6,6 +6,18 @@ export interface ContextMenuState {
 
 export type LeftPanelMode = 'elements' | 'properties' | 'draw';
 export type DrawToolId = 'select' | 'pencil' | 'line' | 'square' | 'circle' | 'triangle' | 'text';
+export type QuickEditAction =
+    | 'color-violet'
+    | 'color-blue'
+    | 'color-rose'
+    | 'color-neutral'
+    | 'shape-square'
+    | 'shape-circle'
+    | 'shape-pill'
+    | 'align-center'
+    | 'border-none';
+
+export type CanvasDeviceMode = 'desktop' | 'tablet' | 'phone';
 
 export type SidebarIcon = 'layout' | 'shape' | 'component' | 'image' | 'text';
 

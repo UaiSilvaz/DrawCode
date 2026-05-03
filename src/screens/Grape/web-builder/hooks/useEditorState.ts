@@ -22,7 +22,7 @@ export function useEditorState(initialProjectId?: string, initialProjectName?: s
   const [pages, setPages] = useState<CanvasPage[]>([
     {
       id: 'page-1',
-      name: 'Pagina 1',
+      name: '/home',
       components: [],
       styles: [],
       schema: [],
