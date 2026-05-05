@@ -196,6 +196,22 @@
     text-align: center;
 }
 
+.draw-page-height-readout {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 72px;
+    height: 34px;
+    padding: 0 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(167, 139, 250, 0.28);
+    background: rgba(255, 255, 255, 0.06);
+    color: #d8d1ff;
+    font-size: 0.78rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
 .draw-btn-danger {
     border-color: rgba(248, 113, 113, 0.6);
     color: #fecaca;
@@ -780,11 +796,36 @@
     min-height: 420px;
     border-radius: 22px;
     border: 1px solid rgba(167, 139, 250, 0.34);
-    overflow: hidden;
+    overflow: auto;
+    scrollbar-gutter: stable;
+    scrollbar-color: #8b5cf6 rgba(15, 9, 31, 0.92);
+    scrollbar-width: thin;
     box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
     background: #070214;
     cursor: grab;
-    touch-action: none;
+    touch-action: pan-x pan-y;
+    overscroll-behavior: contain;
+}
+
+.draw-canvas-shell::-webkit-scrollbar {
+    width: 13px;
+    height: 13px;
+}
+
+.draw-canvas-shell::-webkit-scrollbar-track {
+    background: rgba(15, 9, 31, 0.92);
+    border-radius: 999px;
+}
+
+.draw-canvas-shell::-webkit-scrollbar-thumb {
+    min-height: 54px;
+    border: 3px solid rgba(15, 9, 31, 0.92);
+    border-radius: 999px;
+    background: linear-gradient(180deg, #a78bfa, #7c3aed);
+}
+
+.draw-canvas-shell::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #c4b5fd, #8b5cf6);
 }
 
 .draw-canvas-shell--desktop {
@@ -793,12 +834,12 @@
 }
 
 .draw-canvas-shell--tablet {
-    --draw-shell-width: min(100%, 900px);
+    --draw-shell-width: min(100%, 1180px);
     --draw-shell-height: min(calc(100vh - 230px), 760px);
 }
 
 .draw-canvas-shell--phone {
-    --draw-shell-width: min(100%, 420px);
+    --draw-shell-width: min(100%, 1180px);
     --draw-shell-height: min(calc(100vh - 230px), 760px);
 }
 
@@ -821,11 +862,202 @@
 
 .draw-canvas-shell.is-panning {
     cursor: grabbing;
+    user-select: none;
+}
+
+.draw-canvas-shell.is-panning iframe,
+.draw-canvas-shell.is-panning .gjs-frame,
+.draw-canvas-shell.is-panning .gjs-cv-canvas__frames {
+    pointer-events: none;
 }
 
 .draw-canvas {
     width: 100%;
     height: 100%;
+    min-height: 100%;
+    overflow: visible;
+}
+
+.draw-canvas .gjs-cv-canvas {
+    width: 100% !important;
+    height: 100% !important;
+    overflow: visible !important;
+    scrollbar-width: none;
+}
+
+.draw-canvas .gjs-cv-canvas::-webkit-scrollbar {
+    display: none;
+}
+
+.draw-text-toolbar {
+    position: fixed;
+    left: var(--draw-text-toolbar-x);
+    top: var(--draw-text-toolbar-y);
+    z-index: 150;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    width: max-content;
+    max-width: min(calc(100vw - 24px), 780px);
+    padding: 7px;
+    border-radius: 14px;
+    transform: translate(-50%, calc(-100% - 12px));
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(10, 8, 18, 0.92);
+    color: #ffffff;
+    box-shadow: 0 18px 46px rgba(0, 0, 0, 0.32);
+    backdrop-filter: blur(12px);
+    pointer-events: auto;
+}
+
+.draw-text-toolbar.is-below {
+    transform: translate(-50%, 12px);
+}
+
+.draw-text-toolbar.is-dark {
+    border-color: rgba(15, 23, 42, 0.12);
+    background: rgba(255, 255, 255, 0.94);
+    color: #111827;
+    box-shadow: 0 18px 46px rgba(15, 23, 42, 0.18);
+}
+
+.draw-text-toolbar::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -5px;
+    width: 10px;
+    height: 10px;
+    transform: translateX(-50%) rotate(45deg);
+    background: inherit;
+    border-right: inherit;
+    border-bottom: inherit;
+}
+
+.draw-text-toolbar.is-below::after {
+    top: -5px;
+    bottom: auto;
+    border-right: 0;
+    border-bottom: 0;
+    border-left: inherit;
+    border-top: inherit;
+}
+
+.draw-text-toolbar-group {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.draw-text-toolbar.is-dark .draw-text-toolbar-group {
+    background: rgba(15, 23, 42, 0.06);
+}
+
+.draw-text-toolbar button {
+    position: relative;
+    z-index: 1;
+    display: inline-grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    flex: 0 0 auto;
+    transition: background 0.16s ease, transform 0.16s ease;
+}
+
+.draw-text-toolbar button:hover {
+    transform: translateY(-1px);
+    background: rgba(139, 92, 246, 0.18);
+}
+
+.draw-text-toolbar button.is-active {
+    background: #8b5cf6;
+    color: #ffffff;
+}
+
+.draw-text-field,
+.draw-text-swatch,
+.draw-text-toolbar-link {
+    position: relative;
+    z-index: 1;
+}
+
+.draw-text-field,
+.draw-text-swatch {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 30px;
+    padding: 0 7px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.07);
+    color: inherit;
+}
+
+.draw-text-toolbar.is-dark .draw-text-field,
+.draw-text-toolbar.is-dark .draw-text-swatch {
+    background: rgba(15, 23, 42, 0.07);
+}
+
+.draw-text-field input,
+.draw-text-field select,
+.draw-text-toolbar-link input,
+.draw-text-toolbar-link select {
+    height: 24px;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 0.74rem;
+    font-weight: 700;
+}
+
+.draw-text-field input {
+    width: 42px;
+}
+
+.draw-text-field select {
+    width: 58px;
+}
+
+.draw-text-toolbar select option {
+    color: #111827;
+    background: #ffffff;
+}
+
+.draw-text-swatch input {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+}
+
+.draw-text-toolbar-link {
+    max-width: min(100%, 340px);
+}
+
+.draw-text-toolbar-link input {
+    width: clamp(116px, 18vw, 170px);
+    min-width: 0;
+}
+
+.draw-text-toolbar-link select {
+    width: 92px;
 }
 
 .draw-ai-stage {
@@ -835,24 +1067,29 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 24px;
-    background: rgba(8, 6, 18, 0.42);
-    backdrop-filter: blur(5px);
+    padding: clamp(18px, 3vw, 36px);
+    background:
+        linear-gradient(180deg, rgba(8, 5, 18, 0.72), rgba(8, 5, 18, 0.9)),
+        repeating-linear-gradient(90deg, rgba(167, 139, 250, 0.06) 0 1px, transparent 1px 42px);
+    backdrop-filter: blur(8px);
 }
 
 .draw-ai-loading {
     position: relative;
-    width: min(360px, 100%);
-    min-height: 190px;
-    border-radius: 20px;
-    border: 1px solid rgba(167, 139, 250, 0.28);
-    background: rgba(17, 12, 34, 0.94);
-    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
+    width: min(440px, 100%);
+    min-height: 176px;
+    border-radius: 18px;
+    border: 1px solid rgba(196, 181, 253, 0.32);
+    background:
+        linear-gradient(135deg, rgba(27, 18, 55, 0.98), rgba(14, 10, 31, 0.98));
+    box-shadow:
+        0 28px 80px rgba(0, 0, 0, 0.48),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
     display: grid;
     grid-template-columns: 54px minmax(0, 1fr);
     align-items: center;
     gap: 16px;
-    padding: 22px;
+    padding: clamp(18px, 3vw, 24px);
     overflow: hidden;
 }
 
@@ -1569,10 +1806,14 @@
 }
 
 .gjs-editor-cont,
-.gjs-editor,
-.gjs-cv-canvas,
-.gjs-frame-wrapper,
-.gjs-frame {
+.gjs-editor {
+    width: 100% !important;
+    height: 100% !important;
+    background: transparent !important;
+    overflow: visible !important;
+}
+
+.gjs-cv-canvas {
     width: 100% !important;
     height: 100% !important;
     background: transparent !important;
@@ -1581,11 +1822,65 @@
 .gjs-cv-canvas {
     background: #070214 !important;
     display: flex !important;
-    align-items: center;
+    align-items: flex-start;
+    justify-content: flex-start;
+    overflow: visible !important;
+    scrollbar-width: none;
+}
+
+.gjs-toolbar {
+    border-radius: 0 0 8px 8px !important;
+    overflow: hidden !important;
+    box-shadow: 0 10px 24px rgba(2, 6, 23, 0.2) !important;
+}
+
+.gjs-resizer-h {
+    width: 11px !important;
+    height: 11px !important;
+    border: 2px solid #2f92f5 !important;
+    background: #ffffff !important;
+    margin: -5px !important;
+    box-shadow: 0 0 0 1px rgba(47, 146, 245, 0.16) !important;
+}
+
+.gjs-highlighter,
+.gjs-highlighter-sel {
+    outline-offset: -2px !important;
+}
+
+.gjs-rte-toolbar {
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    background: rgba(8, 6, 18, 0.94) !important;
+    color: #ffffff !important;
+    box-shadow: 0 18px 46px rgba(0, 0, 0, 0.32) !important;
+}
+
+.gjs-cv-canvas::-webkit-scrollbar {
+    display: none;
+}
+
+.gjs-cv-canvas__frames {
+    box-sizing: border-box;
+    min-width: 100%;
+    min-height: 100%;
+    display: flex !important;
+    align-items: flex-start;
     justify-content: center;
+    overflow: visible !important;
+}
+
+.gjs-frame-wrapper {
+    max-width: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: #ffffff !important;
 }
 
 .gjs-frame {
+    max-width: none !important;
+    max-height: none !important;
+    background: #ffffff !important;
     border-radius: 0 !important;
 }
 
@@ -1630,6 +1925,11 @@
             "toolbar"
             "sidebar"
             "canvas";
+        overflow: hidden;
+    }
+
+    .draw-layout.left-collapsed {
+        grid-template-columns: 1fr;
     }
 
     .draw-sidebar {
@@ -1639,21 +1939,27 @@
     }
 
     .draw-canvas-zoom {
-        right: 14px;
-        bottom: 14px;
+        position: static;
+        width: 100%;
+        justify-content: center;
+        order: 4;
     }
 
     .draw-canvas-main {
         padding: 12px;
+        align-items: stretch;
+        justify-content: flex-start;
+        overflow: auto;
+        gap: 10px;
     }
 
     .draw-device-switcher {
-        top: 12px;
-        left: 12px;
+        position: static;
         transform: none;
-        width: calc(100% - 24px);
+        width: 100%;
         justify-content: center;
         gap: 6px;
+        order: 2;
     }
 
     .draw-device-chip {
@@ -1662,19 +1968,100 @@
     }
 
     .draw-pages-panel {
-        top: 56px;
-        left: 12px;
-        width: calc(100% - 24px);
+        position: static;
+        width: 100%;
         max-height: 220px;
+        order: 1;
     }
 
     .draw-canvas-shell {
         --draw-shell-width: 100%;
-        --draw-shell-height: min(calc(100vh - 290px), 620px);
+        --draw-shell-height: min(calc(100vh - 430px), 620px);
+        min-height: 320px;
+        order: 3;
+    }
+
+    .draw-zoom-slider {
+        width: min(180px, 42vw);
     }
 }
 
-@media (max-height: 900px) {
+@media (max-width: 640px) {
+    .draw-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 8px;
+        padding: 8px 10px;
+    }
+
+    .draw-toolbar-left {
+        width: 100%;
+        gap: 6px;
+    }
+
+    .draw-brand-logo {
+        min-width: 112px;
+        height: 30px;
+    }
+
+    .draw-project-input {
+        width: min(100%, 180px);
+        flex: 1 1 150px;
+    }
+
+    .draw-btn {
+        height: 32px;
+        padding: 0 9px;
+        font-size: 0.72rem;
+    }
+
+    .draw-btn-ai span {
+        display: none;
+    }
+
+    .draw-toolbar-actions {
+        gap: 6px;
+    }
+
+    .draw-toolbar-toasts {
+        position: static;
+        align-items: stretch;
+        width: 100%;
+    }
+
+    .draw-toast {
+        max-width: 100%;
+        border-radius: 10px;
+        padding: 8px 10px;
+        font-size: 0.74rem;
+    }
+
+    .draw-pages-panel-head {
+        padding: 9px 10px;
+    }
+
+    .draw-pages-panel-list {
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(150px, 1fr);
+        overflow-x: auto;
+        overflow-y: hidden;
+    }
+
+    .draw-pages-panel-item {
+        min-width: 150px;
+    }
+
+    .draw-device-chip span {
+        display: none;
+    }
+
+    .draw-canvas-shell {
+        --draw-shell-height: min(calc(100vh - 420px), 560px);
+        min-height: 300px;
+    }
+}
+
+@media (max-height: 900px) and (min-width: 861px) {
     .draw-canvas-shell {
         height: min(calc(100vh - 220px), 680px);
     }

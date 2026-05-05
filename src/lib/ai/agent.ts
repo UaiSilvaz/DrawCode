@@ -9,38 +9,108 @@ import { buildShapeMetrics, recognizeShapesFromPayload } from './shape-recognize
 import {
     buildFaithfulGenerationResult,
     type AIGenerateRequest,
+    type WrapperElementSnapshot,
 } from './preview-generator';
 import type { AIGenerationResult, SemanticPage } from './types';
 
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
 const DEFAULT_MODEL = 'gpt-5.2';
 
+const trimString = (value: string, maxLength: number) => (
+    value.length > maxLength ? `${value.slice(0, maxLength)}...` : value
+);
+
+const flattenPromptElements = (elements: WrapperElementSnapshot[]) => {
+    const output: WrapperElementSnapshot[] = [];
+    const stack = [...elements];
+
+    while (stack.length > 0) {
+        const current = stack.shift();
+        if (!current) continue;
+        output.push(current);
+        stack.push(...(current.children as WrapperElementSnapshot[]));
+    }
+
+    return output;
+};
+
+const uniqueTokens = (values: string[]) => Array.from(new Set(
+    values.map((value) => value.trim()).filter(Boolean),
+)).slice(0, 24);
+
+const buildStyleInventory = (elements: WrapperElementSnapshot[]) => {
+    const flattened = flattenPromptElements(elements);
+    return {
+        colors: uniqueTokens(flattened.flatMap((element) => [
+            element.style.backgroundColor,
+            element.style.color,
+            element.style.borderColor,
+        ])),
+        backgrounds: uniqueTokens(flattened.map((element) => element.style.backgroundImage)),
+        fonts: uniqueTokens(flattened.map((element) => element.style.fontFamily)),
+        shadows: uniqueTokens(flattened.map((element) => element.style.boxShadow)),
+        radii: uniqueTokens(flattened.map((element) => element.style.borderRadius)),
+    };
+};
+
+const trimElementForPrompt = (element: WrapperElementSnapshot, depth = 0): Record<string, unknown> => ({
+    id: element.id,
+    tagName: element.tagName,
+    type: element.type,
+    text: trimString(element.text, 360),
+    html: trimString(element.html, depth === 0 ? 1200 : 520),
+    position: element.position,
+    size: element.size,
+    style: {
+        display: element.style.display,
+        position: element.style.position,
+        backgroundColor: element.style.backgroundColor,
+        backgroundImage: element.style.backgroundImage,
+        color: element.style.color,
+        fontFamily: element.style.fontFamily,
+        fontSize: element.style.fontSize,
+        fontWeight: element.style.fontWeight,
+        lineHeight: element.style.lineHeight,
+        letterSpacing: element.style.letterSpacing,
+        textAlign: element.style.textAlign,
+        padding: element.style.padding,
+        margin: element.style.margin,
+        border: element.style.border,
+        borderRadius: element.style.borderRadius,
+        borderWidth: element.style.borderWidth,
+        borderColor: element.style.borderColor,
+        borderStyle: element.style.borderStyle,
+        boxShadow: element.style.boxShadow,
+        transform: element.style.transform,
+        opacity: element.style.opacity,
+        zIndex: element.style.zIndex,
+    },
+    attributes: {
+        src: element.attributes.src,
+        alt: element.attributes.alt,
+        placeholder: element.attributes.placeholder,
+        href: element.attributes.href,
+        class: element.attributes.class,
+        dataDcType: element.attributes['data-dc-type'],
+    },
+    children: depth < 2
+        ? (element.children as WrapperElementSnapshot[])
+            .slice(0, 14)
+            .map((child) => trimElementForPrompt(child, depth + 1))
+        : [],
+});
+
 const trimSnapshotForPrompt = (payload: AIGenerateRequest) => ({
     projectName: payload.projectName,
     wrapperBounds: payload.wrapperBounds,
     sketchHints: payload.sketchHints,
-    elements: payload.wrapperElements.map((element) => ({
-        id: element.id,
-        tagName: element.tagName,
-        type: element.type,
-        text: element.text.slice(0, 280),
-        position: element.position,
-        size: element.size,
-        style: {
-            backgroundColor: element.style.backgroundColor,
-            color: element.style.color,
-            fontSize: element.style.fontSize,
-            fontWeight: element.style.fontWeight,
-            borderRadius: element.style.borderRadius,
-        },
-        attributes: {
-            src: element.attributes.src,
-            alt: element.attributes.alt,
-            placeholder: element.attributes.placeholder,
-            href: element.attributes.href,
-        },
-        childrenCount: element.children.length,
-    })).slice(0, 80),
+    sourceCss: trimString(payload.css, 8000),
+    sourceHtml: trimString(payload.html, 5000),
+    wrapperHtml: trimString(payload.wrapperHtml, 7000),
+    styleInventory: buildStyleInventory(payload.wrapperElements as WrapperElementSnapshot[]),
+    elements: payload.wrapperElements.map((element) => (
+        trimElementForPrompt(element as WrapperElementSnapshot)
+    )).slice(0, 80),
 });
 
 const buildSystemPrompt = () => `
@@ -56,6 +126,11 @@ Regras:
 - Preencha campos nao usados com string vazia, arrays vazios ou 0 quando necessario.
 - Nao gere HTML cru neste passo.
 - Preserve a intencao visual do usuario.
+- Preserve geometria e hierarquia: posicoes x/y, largura, altura, alinhamento, ordem visual, sobreposicoes e z-index devem continuar reconheciveis.
+- Preserve identidade visual: cores exatas, gradientes, sombras, bordas, border-radius, fontes, pesos, line-height, espacamentos, opacidade e imagens nao devem virar um tema generico.
+- Nao simplifique cards, botoes, inputs, textos ou containers para blocos HTML basicos se o snapshot trouxer CSS especifico.
+- Para rabiscos/desenhos livres, leia o SVG/path no campo html e mantenha a energia do traco: linhas tortas, riscos, setas, contornos e regioes desenhadas devem influenciar o componente final.
+- Quando um elemento existente ja estiver bem estilizado, trate-o como fonte de verdade e apenas torne a estrutura mais semantica.
 - Use componentes como navbar, hero, cardGrid, card, form, field, button, image, footer e section.
 - Se houver rabiscos/desenhos livres, interprete-os como sugestoes de estrutura quando estiverem perto de textos, botoes ou inputs.
 - Gere somente componentes visuais, sem rotas, APIs ou logica server-side.
@@ -65,6 +140,8 @@ Regras:
 
 const buildUserPrompt = (payload: AIGenerateRequest) => `
 Analise este snapshot do canvas branco do DrawCode e devolva a arvore semantica de componentes.
+
+Prioridade maxima: fidelidade visual. Use sourceCss, wrapperHtml, styleInventory e elements como referencia para manter o resultado parecido com o canvas, nao como um template novo.
 
 Snapshot:
 ${JSON.stringify(trimSnapshotForPrompt(payload), null, 2)}
@@ -205,20 +282,31 @@ export async function generateDrawCodeAI(payload: AIGenerateRequest): Promise<AI
     const recognizedShapes = recognizeShapesFromPayload(payload);
     const shapeGenerated = generateCodeFromRecognizedShapes(recognizedShapes, payload.wrapperBounds);
     const metrics = buildShapeMetrics(recognizedShapes, Date.now() - startedAt);
+    const hasFaithfulSnapshot = payload.wrapperElements.length > 0 || payload.wrapperHtml.trim().length > 0;
+    const primaryPreview = hasFaithfulSnapshot
+        ? faithful.preview
+        : recognizedShapes.length > 0 ? shapeGenerated.preview : generated.preview;
+    const primaryCode = hasFaithfulSnapshot
+        ? faithful.code
+        : recognizedShapes.length > 0 ? shapeGenerated.code : generated.code;
 
     return {
-        summary: recognizedShapes.length > 0
+        summary: hasFaithfulSnapshot
+            ? 'Layout preservado com fidelidade a partir do canvas e dos estilos atuais.'
+            : recognizedShapes.length > 0
             ? buildShapeSummary(mode)
             : buildSummary(semanticPage, mode),
         interpretedSketch: buildSketchSummary(payload, mode),
-        preview: recognizedShapes.length > 0 ? shapeGenerated.preview : generated.preview,
+        preview: primaryPreview,
         faithfulPreview: faithful.preview,
-        code: recognizedShapes.length > 0 ? shapeGenerated.code : generated.code,
+        code: primaryCode,
         recognizedShapes,
         metrics,
         semanticPage,
         recommendations: [
-            'O layout foi convertido em componentes editaveis no canvas.',
+            hasFaithfulSnapshot
+                ? 'A saida principal preserva HTML, CSS, cores, bordas, sombras e tracos capturados do canvas.'
+                : 'O layout foi convertido em componentes editaveis no canvas.',
             'Saida principal disponivel em React + CSS, com HTML/CSS/JS como export secundario.',
             'Revise textos e acessibilidade antes de publicar o site final.',
             mode === 'deterministic'

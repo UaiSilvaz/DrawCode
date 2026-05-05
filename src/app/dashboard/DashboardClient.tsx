@@ -201,7 +201,14 @@ export default function DashboardClient({ user }: { user: User }) {
             <div className="absolute bottom-16 left-20 z-50 flex w-80 flex-col rounded-2xl border border-[#ffffff15] bg-[#1e1f22] py-2 text-sm shadow-[0_8px_30px_rgb(0,0,0,0.5)] animate-in fade-in slide-in-from-bottom-2">
               <div className="border-b border-[#ffffff10] px-4 py-3">
                 <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-gray-400">Contas</p>
-                <div className="mx-[-8px] flex cursor-pointer items-center gap-3 rounded-xl p-2 transition-colors hover:bg-white/5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsProfileOpen(false);
+                    router.push('/dashboard/account');
+                  }}
+                  className="mx-[-8px] flex w-[calc(100%+16px)] cursor-pointer items-center gap-3 rounded-xl p-2 text-left transition-colors hover:bg-white/5"
+                >
                   <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-purple-600 to-blue-600 text-lg text-white">
                     {user.image ? <img src={user.image} alt="Avatar" className="h-full w-full object-cover" /> : initials}
                   </div>
@@ -210,7 +217,7 @@ export default function DashboardClient({ user }: { user: User }) {
                     <p className="truncate text-xs text-gray-400">{user.email}</p>
                   </div>
                   <ChevronRight size={18} className="text-gray-500" />
-                </div>
+                </button>
               </div>
 
               <div className="border-b border-[#ffffff10] py-2">
@@ -357,7 +364,7 @@ export default function DashboardClient({ user }: { user: User }) {
                         <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
                           <button
                             type="button"
-                            onClick={() => router.push('/grape')}
+                            onClick={() => router.push(`/grape?projectId=${project.id}`)}
                             className="translate-y-4 rounded-lg bg-purple-600 px-5 py-2.5 font-medium text-white shadow-xl transition-all duration-300 hover:bg-purple-500 group-hover:translate-y-0"
                           >
                             Editar

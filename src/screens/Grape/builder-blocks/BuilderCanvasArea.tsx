@@ -1,6 +1,6 @@
 import { useState, type DragEvent, type KeyboardEvent, type RefObject } from 'react';
 import Dock, { type DockItemData } from '@/components/Dock';
-import { Check, FileText, Home, LoaderCircle, Monitor, Pencil, Plus, Smartphone, Sparkles, Tablet, X } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpToLine, Check, FileText, Home, LoaderCircle, Monitor, Pencil, Plus, Smartphone, Sparkles, Tablet, X } from 'lucide-react';
 import type { CanvasDeviceMode } from './types';
 
 interface BuilderCanvasAreaProps {
@@ -17,6 +17,9 @@ interface BuilderCanvasAreaProps {
     onZoomOut: () => void;
     onZoomReset: () => void;
     onZoomIn: () => void;
+    pageHeight: number;
+    onIncreasePageHeight: () => void;
+    onDecreasePageHeight: () => void;
     pages: Array<{ id: string; name: string }>;
     activePageIndex: number;
     onCreatePage: () => void;
@@ -55,6 +58,9 @@ export default function BuilderCanvasArea({
     onZoomOut,
     onZoomReset,
     onZoomIn,
+    pageHeight,
+    onIncreasePageHeight,
+    onDecreasePageHeight,
     pages,
     activePageIndex,
     onCreatePage,
@@ -97,7 +103,7 @@ export default function BuilderCanvasArea({
         <main className="draw-canvas-main">
             <aside className="draw-pages-panel">
                 <div className="draw-pages-panel-head">
-                    <h3>Pages</h3>
+                    <h3>Paginas</h3>
                     <button
                         type="button"
                         className="draw-pages-add"
@@ -206,7 +212,7 @@ export default function BuilderCanvasArea({
                     disabled={!canUseEditorActions}
                 >
                     <Smartphone size={14} />
-                    <span>Phone</span>
+                    <span>Celular</span>
                 </button>
             </div>
             <div
@@ -216,12 +222,12 @@ export default function BuilderCanvasArea({
                 onDrop={onCanvasDrop}
             >
                 <div id="gjs" className="draw-canvas" />
-                {aiGenerating && (
-                    <div className="draw-ai-stage">
-                        <AILoadingState />
-                    </div>
-                )}
             </div>
+            {aiGenerating && (
+                <div className="draw-ai-stage" aria-live="polite" aria-busy="true">
+                    <AILoadingState />
+                </div>
+            )}
             <div className="draw-canvas-zoom">
                 <input
                     type="range"
@@ -237,6 +243,29 @@ export default function BuilderCanvasArea({
                     {zoomLevel}%
                 </button>
                 <button className="draw-btn" onClick={onZoomIn} disabled={!canUseEditorActions}>+</button>
+                <span className="draw-page-height-readout" title="Altura atual da tela">
+                    {Math.round(pageHeight)}px
+                </span>
+                <button
+                    type="button"
+                    className="draw-btn draw-btn-icon"
+                    onClick={onDecreasePageHeight}
+                    disabled={!canUseEditorActions || pageHeight <= 860}
+                    aria-label="Reduzir altura da pagina"
+                    title="Reduzir altura"
+                >
+                    <ArrowUpToLine size={15} />
+                </button>
+                <button
+                    type="button"
+                    className="draw-btn draw-btn-icon"
+                    onClick={onIncreasePageHeight}
+                    disabled={!canUseEditorActions}
+                    aria-label="Aumentar altura da pagina"
+                    title="Aumentar altura"
+                >
+                    <ArrowDownToLine size={15} />
+                </button>
             </div>
             <Dock items={dockItems} panelHeight={68} baseItemSize={50} magnification={72} />
         </main>

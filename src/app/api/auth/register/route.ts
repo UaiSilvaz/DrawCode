@@ -23,7 +23,11 @@ function rateLimit(ip: string, max = 5, windowMs = 60_000): boolean {
 
 // ---- Validação Zod ----
 const registerSchema = z.object({
-    name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+    name: z.string()
+        .trim()
+        .min(3, 'Nome deve ter pelo menos 3 caracteres')
+        .max(32, 'Nome deve ter no maximo 32 caracteres')
+        .regex(/^[A-Za-z0-9_. -]+$/, 'Use apenas letras, numeros, espacos, ponto, hifen ou underline'),
     email: z.string().email('Email inválido'),
     password: z
         .string()
@@ -61,6 +65,17 @@ export async function POST(request: NextRequest) {
         if (existing) {
             return NextResponse.json(
                 { error: 'Email já cadastrado' },
+                { status: 409 }
+            );
+        }
+
+        const existingName = await prisma.user.findFirst({
+            where: { name: { equals: name, mode: 'insensitive' } },
+            select: { id: true },
+        });
+        if (existingName) {
+            return NextResponse.json(
+                { error: 'Nome de usuario ja esta em uso' },
                 { status: 409 }
             );
         }

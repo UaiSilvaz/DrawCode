@@ -60,10 +60,24 @@ export async function POST(request: NextRequest) {
 }
 
 // GET /api/grape/save – lista projetos do usuário
-export async function GET() {
+export async function GET(request: NextRequest) {
     const session = await auth();
     if (!session?.user?.id) {
         return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
+
+    const projectId = request.nextUrl.searchParams.get('projectId');
+    if (projectId) {
+        const project = await prisma.grapeProject.findFirst({
+            where: { id: projectId, userId: session.user.id },
+            select: { id: true, name: true, data: true, createdAt: true, updatedAt: true },
+        });
+
+        if (!project) {
+            return NextResponse.json({ error: 'Projeto nao encontrado' }, { status: 404 });
+        }
+
+        return NextResponse.json({ project });
     }
 
     const projects = await prisma.grapeProject.findMany({

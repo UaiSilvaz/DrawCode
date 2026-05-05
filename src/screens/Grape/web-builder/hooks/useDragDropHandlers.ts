@@ -4,6 +4,11 @@ import type { EditorInstance } from '../builder-core';
 import type { SidebarBlockItem } from '../../builder-blocks/types';
 import { unwrapAddedComponent, selectComponent, applySnapForComponent } from '../builder-core';
 
+type DropPointEvent = {
+  clientX: number;
+  clientY: number;
+};
+
 export function useDragDropHandlers(
   editor: EditorInstance | null,
   sidebarBlocks: SidebarBlockItem[],
@@ -12,7 +17,30 @@ export function useDragDropHandlers(
   draggedBlockIdRef: React.MutableRefObject<string | null>,
   draggedBlockRef: React.MutableRefObject<SidebarBlockItem | null>,
 ) {
-  const handleInsertBlock = useCallback((payload: SidebarBlockItem | string) => {
+  const getDropStyle = useCallback((event: DropPointEvent): Record<string, string> => {
+    if (!editor) return {};
+
+    const canvasApi = (editor as { Canvas?: { getDocument?: () => Document | null } }).Canvas;
+    const canvasDoc = canvasApi?.getDocument?.();
+    const body = canvasDoc?.body;
+    if (!body) return {};
+
+    const rect = body.getBoundingClientRect();
+    if (!rect.width || !rect.height) return {};
+
+    const x = Math.max(0, Math.min(body.clientWidth, event.clientX - rect.left));
+    const y = Math.max(0, event.clientY - rect.top);
+
+    return {
+      left: `${Math.round(x)}px`,
+      top: `${Math.round(y)}px`,
+    };
+  }, [editor]);
+
+  const handleInsertBlock = useCallback((
+    payload: SidebarBlockItem | string,
+    styleOverrides: Record<string, string> = {},
+  ) => {
     if (!editor) return;
     const fromSidebarItem = typeof payload !== 'string' ? payload : null;
     const safeBlockId = typeof payload === 'string' ? payload.trim() : payload.id.trim();
@@ -25,6 +53,14 @@ export function useDragDropHandlers(
     const added = editor.addComponents(content as never);
     const inserted = unwrapAddedComponent(added);
     if (inserted) {
+      const currentStyle = inserted.getStyle?.() ?? {};
+      const sanitizedStyle = Object.fromEntries(
+        Object.entries(currentStyle).filter(([, value]) => value !== undefined),
+      ) as Record<string, string | number>;
+      inserted.setStyle({
+        ...sanitizedStyle,
+        ...styleOverrides,
+      });
       if (snapRef.current) applySnapForComponent(inserted);
       selectComponent(editor, inserted);
     }
@@ -53,16 +89,17 @@ export function useDragDropHandlers(
       draggedBlockIdRef.current;
     const draggedItem = draggedBlockRef.current;
     if (!blockId) return;
+    const dropStyle = getDropStyle(event);
     if (draggedItem && draggedItem.id === blockId) {
-      handleInsertBlock(draggedItem);
+      handleInsertBlock(draggedItem, dropStyle);
     } else {
       const fallbackItem = sidebarBlocks.find((item) => item.id === blockId);
-      if (fallbackItem) handleInsertBlock(fallbackItem);
-      else handleInsertBlock(blockId);
+      if (fallbackItem) handleInsertBlock(fallbackItem, dropStyle);
+      else handleInsertBlock(blockId, dropStyle);
     }
     draggedBlockRef.current = null;
     draggedBlockIdRef.current = null;
-  }, [draggedBlockRef, draggedBlockIdRef, handleInsertBlock, sidebarBlocks]);
+  }, [draggedBlockRef, draggedBlockIdRef, getDropStyle, handleInsertBlock, sidebarBlocks]);
 
   // Setup canvas document drag and drop
   useEffect(() => {
@@ -86,12 +123,13 @@ export function useDragDropHandlers(
       if (!droppedId) return;
 
       const draggedItem = draggedBlockRef.current;
+      const dropStyle = getDropStyle(event);
       if (draggedItem && draggedItem.id === droppedId) {
-        handleInsertBlock(draggedItem);
+        handleInsertBlock(draggedItem, dropStyle);
       } else {
         const fallbackItem = sidebarBlocks.find((item) => item.id === droppedId);
-        if (fallbackItem) handleInsertBlock(fallbackItem);
-        else handleInsertBlock(droppedId);
+        if (fallbackItem) handleInsertBlock(fallbackItem, dropStyle);
+        else handleInsertBlock(droppedId, dropStyle);
       }
 
       draggedBlockRef.current = null;
@@ -105,7 +143,7 @@ export function useDragDropHandlers(
       canvasDoc.removeEventListener('dragover', onDragOver);
       canvasDoc.removeEventListener('drop', onDrop);
     };
-  }, [editor, handleInsertBlock, sidebarBlocks, draggedBlockIdRef, draggedBlockRef]);
+  }, [editor, getDropStyle, handleInsertBlock, sidebarBlocks, draggedBlockIdRef, draggedBlockRef]);
 
   return {
     handleInsertBlock,

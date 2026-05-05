@@ -1,9 +1,27 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import 'grapesjs/dist/css/grapes.min.css';
 import '../ui.css';
 import { type DockItemData } from '@/components/Dock';
+import {
+    AlignCenter,
+    AlignLeft,
+    AlignRight,
+    Baseline,
+    Bold,
+    Eraser,
+    Highlighter,
+    Italic,
+    Link,
+    List,
+    ListOrdered,
+    MousePointerClick,
+    Pilcrow,
+    Type,
+    Underline,
+    Unlink,
+} from 'lucide-react';
 import { VscAccount, VscArchive, VscHome, VscSettingsGear } from 'react-icons/vsc';
 import BuilderToolbar from '../builder-blocks/BuilderToolbar';
 import BuilderElementsSidebar from '../builder-blocks/BuilderElementsSidebar';
@@ -12,10 +30,21 @@ import BuilderContextMenu from '../builder-blocks/BuilderContextMenu';
 import type { CanvasDeviceMode, DrawToolId, QuickEditAction } from '../builder-blocks/types';
 import type { RecognizedShape, RecognizedShapeKind } from '@/lib/ai/types';
 import {
+    CANVAS_DEVICE_WIDTHS,
+    CANVAS_INITIAL_TOP_GAP,
+    CANVAS_INFINITE_PADDING,
     PAGE_HEIGHT,
     PAGE_WIDTH,
     applySnapForComponent,
+    clampCanvasPageHeight,
+    getCanvasContentHeight,
+    getCanvasPageHeight,
+    getSerializableComponents,
+    getSerializableProjectData,
+    getSerializableStyles,
+    normalizeSavedDeviceMode,
     selectComponent,
+    setCanvasViewport,
     type AnyComponent,
     type CanvasPage,
     type WrapperBoundsSnapshot,
@@ -54,16 +83,238 @@ type DrawStrokeSession = {
     previewElement: SVGSVGElement | null;
 };
 
+type TextToolbarState = {
+    x: number;
+    y: number;
+    tone: 'light' | 'dark';
+    placement: 'top' | 'bottom';
+    bold: boolean;
+    italic: boolean;
+    underline: boolean;
+    align: 'left' | 'center' | 'right' | 'justify';
+    fontSize: string;
+    lineHeight: string;
+    letterSpacing: string;
+    color: string;
+    backgroundColor: string;
+    href: string;
+    target: '_self' | '_blank';
+    isLink: boolean;
+    isButtonLike: boolean;
+    listStyle: 'none' | 'disc' | 'decimal';
+};
+
+type TextStyleAction =
+    | 'bold'
+    | 'italic'
+    | 'underline'
+    | 'align-left'
+    | 'align-center'
+    | 'align-right'
+    | 'font-size'
+    | 'line-height'
+    | 'letter-spacing'
+    | 'color'
+    | 'background-color'
+    | 'list-bullet'
+    | 'list-number'
+    | 'link-url'
+    | 'link-target'
+    | 'link-remove'
+    | 'buttonify'
+    | 'clear-formatting';
+
+type TextStyleValue = string | number | boolean | null;
+
 const DRAW_STROKE_WIDTH = 4;
 const DRAW_PREVIEW_STROKE = '#f472b6';
 const DRAW_PREVIEW_FILL = 'rgba(244, 114, 182, 0.18)';
 const MIN_DRAW_SIZE = 24;
 const DEFAULT_SHAPE_SIZE = 140;
+const FONT_SIZE_PRESETS = ['12', '14', '16', '18', '20', '24', '28', '32', '40', '48', '64', '80'];
+const LINE_HEIGHT_PRESETS = ['1', '1.15', '1.25', '1.35', '1.5', '1.75', '2'];
+const LETTER_SPACING_PRESETS = ['-1', '0', '0.5', '1', '2', '4'];
+
+const parseColorLuminance = (value: string): number | null => {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized || normalized === 'transparent' || normalized === 'none') return null;
+
+    const rgbMatch = normalized.match(/rgba?\(([^)]+)\)/);
+    if (rgbMatch?.[1]) {
+        const [r, g, b, alphaValue] = rgbMatch[1].split(',').map((part) => Number.parseFloat(part.trim()));
+        const a = Number.isFinite(alphaValue) ? alphaValue : 1;
+        if ([r, g, b].some((channel) => !Number.isFinite(channel))) return null;
+        if (Number.isFinite(a) && a <= 0.08) return null;
+        return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+    }
+
+    const hexMatch = normalized.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+    if (!hexMatch?.[1]) return null;
+    const hex = hexMatch[1].length === 3
+        ? hexMatch[1].split('').map((char) => `${char}${char}`).join('')
+        : hexMatch[1];
+    const r = Number.parseInt(hex.slice(0, 2), 16);
+    const g = Number.parseInt(hex.slice(2, 4), 16);
+    const b = Number.parseInt(hex.slice(4, 6), 16);
+    return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+};
+
+const toHexColor = (value: string | number | undefined, fallback: string): string => {
+    const normalized = String(value ?? '').trim().toLowerCase();
+    if (/^#[0-9a-f]{6}$/i.test(normalized)) return normalized;
+    if (/^#[0-9a-f]{3}$/i.test(normalized)) {
+        return `#${normalized.slice(1).split('').map((char) => `${char}${char}`).join('')}`;
+    }
+
+    const rgbMatch = normalized.match(/rgba?\(([^)]+)\)/);
+    if (!rgbMatch?.[1]) return fallback;
+
+    const [r, g, b, alphaValue] = rgbMatch[1].split(',').map((part) => Number.parseFloat(part.trim()));
+    const alpha = Number.isFinite(alphaValue) ? alphaValue : 1;
+    if ([r, g, b].some((channel) => !Number.isFinite(channel)) || alpha <= 0.08) return fallback;
+
+    const toChannel = (channel: number) => Math.max(0, Math.min(255, Math.round(channel)))
+        .toString(16)
+        .padStart(2, '0');
+    return `#${toChannel(r)}${toChannel(g)}${toChannel(b)}`;
+};
+
+function TextSelectionToolbar({
+    state,
+    onApply,
+}: {
+    state: TextToolbarState | null;
+    onApply: (action: TextStyleAction, value?: TextStyleValue) => void;
+}) {
+    if (!state) return null;
+
+    const buttonClass = (active: boolean) => (active ? 'is-active' : '');
+
+    return (
+        <div
+            className={`draw-text-toolbar ${state.tone === 'dark' ? 'is-dark' : ''} ${state.placement === 'bottom' ? 'is-below' : ''}`}
+            style={{
+                '--draw-text-toolbar-x': `${state.x}px`,
+                '--draw-text-toolbar-y': `${state.y}px`,
+            } as CSSProperties}
+            onMouseDown={(event) => event.stopPropagation()}
+        >
+            <div className="draw-text-toolbar-group">
+                <button type="button" className={buttonClass(state.bold)} onMouseDown={(event) => event.preventDefault()} onClick={() => onApply('bold')} aria-label="Negrito" title="Negrito">
+                    <Bold size={16} />
+                </button>
+                <button type="button" className={buttonClass(state.italic)} onMouseDown={(event) => event.preventDefault()} onClick={() => onApply('italic')} aria-label="Italico" title="Italico">
+                    <Italic size={16} />
+                </button>
+                <button type="button" className={buttonClass(state.underline)} onMouseDown={(event) => event.preventDefault()} onClick={() => onApply('underline')} aria-label="Sublinhado" title="Sublinhado">
+                    <Underline size={16} />
+                </button>
+            </div>
+
+            <div className="draw-text-toolbar-group">
+                <button type="button" className={buttonClass(state.align === 'left')} onMouseDown={(event) => event.preventDefault()} onClick={() => onApply('align-left')} aria-label="Alinhar a esquerda" title="Alinhar a esquerda">
+                    <AlignLeft size={16} />
+                </button>
+                <button type="button" className={buttonClass(state.align === 'center')} onMouseDown={(event) => event.preventDefault()} onClick={() => onApply('align-center')} aria-label="Centralizar" title="Centralizar">
+                    <AlignCenter size={16} />
+                </button>
+                <button type="button" className={buttonClass(state.align === 'right')} onMouseDown={(event) => event.preventDefault()} onClick={() => onApply('align-right')} aria-label="Alinhar a direita" title="Alinhar a direita">
+                    <AlignRight size={16} />
+                </button>
+            </div>
+
+            <div className="draw-text-toolbar-group">
+                <label className="draw-text-field draw-text-field-number" title="Tamanho da fonte">
+                    <Type size={14} />
+                    <input
+                        type="number"
+                        min={8}
+                        max={160}
+                        step={1}
+                        value={state.fontSize}
+                        list="draw-font-size-presets"
+                        onChange={(event) => onApply('font-size', event.target.value)}
+                        aria-label="Tamanho da fonte"
+                    />
+                </label>
+                <datalist id="draw-font-size-presets">
+                    {FONT_SIZE_PRESETS.map((size) => <option key={size} value={size} />)}
+                </datalist>
+                <label className="draw-text-field draw-text-field-select" title="Altura da linha">
+                    <Pilcrow size={14} />
+                    <select value={state.lineHeight} onChange={(event) => onApply('line-height', event.target.value)} aria-label="Altura da linha">
+                        {!LINE_HEIGHT_PRESETS.includes(state.lineHeight) && <option value={state.lineHeight}>{state.lineHeight}</option>}
+                        {LINE_HEIGHT_PRESETS.map((value) => <option key={value} value={value}>{value}</option>)}
+                    </select>
+                </label>
+                <label className="draw-text-field draw-text-field-select" title="Espacamento entre letras">
+                    <Baseline size={14} />
+                    <select value={state.letterSpacing} onChange={(event) => onApply('letter-spacing', event.target.value)} aria-label="Espacamento entre letras">
+                        {!LETTER_SPACING_PRESETS.includes(state.letterSpacing) && <option value={state.letterSpacing}>{state.letterSpacing}px</option>}
+                        {LETTER_SPACING_PRESETS.map((value) => <option key={value} value={value}>{value}px</option>)}
+                    </select>
+                </label>
+            </div>
+
+            <div className="draw-text-toolbar-group">
+                <label className="draw-text-swatch" title="Cor do texto">
+                    <Baseline size={14} />
+                    <input type="color" value={state.color} onChange={(event) => onApply('color', event.target.value)} aria-label="Cor do texto" />
+                </label>
+                <label className="draw-text-swatch" title="Cor de fundo">
+                    <Highlighter size={14} />
+                    <input type="color" value={state.backgroundColor} onChange={(event) => onApply('background-color', event.target.value)} aria-label="Cor de fundo" />
+                </label>
+            </div>
+
+            <div className="draw-text-toolbar-group">
+                <button type="button" className={buttonClass(state.listStyle === 'disc')} onMouseDown={(event) => event.preventDefault()} onClick={() => onApply('list-bullet')} aria-label="Lista com marcadores" title="Lista com marcadores">
+                    <List size={16} />
+                </button>
+                <button type="button" className={buttonClass(state.listStyle === 'decimal')} onMouseDown={(event) => event.preventDefault()} onClick={() => onApply('list-number')} aria-label="Lista numerada" title="Lista numerada">
+                    <ListOrdered size={16} />
+                </button>
+            </div>
+
+            <div className="draw-text-toolbar-group draw-text-toolbar-link">
+                <Link size={15} />
+                <input
+                    type="url"
+                    value={state.href}
+                    onChange={(event) => onApply('link-url', event.target.value)}
+                    placeholder="https://..."
+                    aria-label="Destino do link"
+                />
+                <select value={state.target} onChange={(event) => onApply('link-target', event.target.value)} aria-label="Abertura do link">
+                    <option value="_self">Mesma aba</option>
+                    <option value="_blank">Nova aba</option>
+                </select>
+                <button type="button" className={buttonClass(state.isLink)} onMouseDown={(event) => event.preventDefault()} onClick={() => onApply('link-remove')} aria-label="Remover link" title="Remover link">
+                    <Unlink size={15} />
+                </button>
+                <button type="button" className={buttonClass(state.isButtonLike)} onMouseDown={(event) => event.preventDefault()} onClick={() => onApply('buttonify')} aria-label="Transformar em botao" title="Transformar em botao">
+                    <MousePointerClick size={15} />
+                </button>
+            </div>
+
+            <div className="draw-text-toolbar-group">
+                <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => onApply('clear-formatting')} aria-label="Remover formatacao" title="Remover formatacao">
+                    <Eraser size={16} />
+                </button>
+            </div>
+        </div>
+    );
+}
 
 
-export default function WebBuilder({ userId, projectId: initialProjectId, projectName: initialProjectName }: WebBuilderProps) {
+export default function WebBuilder({
+    userId,
+    projectId: initialProjectId,
+    projectName: initialProjectName,
+    projectData: initialProjectData,
+}: WebBuilderProps) {
     // State management
-    const editorState = useEditorState(initialProjectId, initialProjectName);
+    const editorState = useEditorState(initialProjectId, initialProjectName, initialProjectData);
     const {
         editor,
         saving,
@@ -132,7 +383,18 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
     const drawStrokeRef = useRef<DrawStrokeSession | null>(null);
     const drawModeActive = leftPanelMode === 'draw';
     const [hasSelectedComponent, setHasSelectedComponent] = useState(false);
-    const [deviceMode, setDeviceMode] = useState<CanvasDeviceMode>('desktop');
+    const [textToolbar, setTextToolbar] = useState<TextToolbarState | null>(null);
+    const [deviceMode, setDeviceMode] = useState<CanvasDeviceMode>(() => (
+        normalizeSavedDeviceMode(initialProjectData?.activeDeviceMode)
+    ));
+    const [isOnline, setIsOnline] = useState(true);
+    const [isEditorHydrated, setIsEditorHydrated] = useState(false);
+    const [autoSaveVersion, setAutoSaveVersion] = useState(0);
+    const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const forcedAutoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const autoSaveReadyRef = useRef(false);
+    const lastAutoSaveFingerprintRef = useRef('');
+    const hydratedEditorRef = useRef(false);
 
     const getSelectedComponent = useCallback((): AnyComponent | null => {
         if (!editor) return null;
@@ -140,13 +402,53 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
         return (maybeEditor.getSelected?.() ?? null) as AnyComponent | null;
     }, [editor]);
 
-    const applyDeviceMode = useCallback((mode: CanvasDeviceMode) => {
-        setDeviceMode(mode);
+    const markAutoSaveDirty = useCallback(() => {
+        setAutoSaveVersion((version) => version + 1);
+    }, []);
+
+    const getActivePageHeight = useCallback(() => (
+        pagesRef.current[activePageIndexRef.current]?.height ?? PAGE_HEIGHT
+    ), [activePageIndexRef, pagesRef]);
+
+    const getActiveCanvasWidth = useCallback(() => (
+        CANVAS_DEVICE_WIDTHS[deviceMode]
+    ), [deviceMode]);
+
+    const applyCanvasDeviceViewport = useCallback((
+        mode: CanvasDeviceMode = deviceMode,
+        height = getActivePageHeight(),
+    ) => {
         if (!editor) return;
-        const targetDevice = mode === 'desktop' ? 'Desktop' : mode === 'tablet' ? 'Tablet' : 'Phone';
-        const maybeEditor = editor as unknown as { setDevice?: (name: string) => void };
-        maybeEditor.setDevice?.(targetDevice);
-    }, [editor]);
+        setCanvasViewport(editor, CANVAS_DEVICE_WIDTHS[mode], height);
+    }, [deviceMode, editor, getActivePageHeight]);
+
+    const syncActivePageHeightFromCanvas = useCallback((updateState = false) => {
+        if (!editor) return getActivePageHeight();
+        const nextHeight = getCanvasPageHeight(editor);
+        const pageIndex = activePageIndexRef.current;
+        const currentPage = pagesRef.current[pageIndex];
+
+        if (currentPage && currentPage.height !== nextHeight) {
+            const nextPages = [...pagesRef.current];
+            nextPages[pageIndex] = {
+                ...currentPage,
+                height: nextHeight,
+            };
+            pagesRef.current = nextPages;
+            if (updateState) setPages(nextPages);
+        }
+
+        applyCanvasDeviceViewport(deviceMode, nextHeight);
+        return nextHeight;
+    }, [
+        activePageIndexRef,
+        applyCanvasDeviceViewport,
+        deviceMode,
+        editor,
+        getActivePageHeight,
+        pagesRef,
+        setPages,
+    ]);
 
     const clonePayload = useCallback((payload: unknown) => {
         if (payload == null) return payload;
@@ -166,22 +468,24 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
     ), []);
 
     const createPreviewElement = useCallback((canvasDoc: Document) => {
+        const previewHeight = getActivePageHeight();
+        const previewWidth = getActiveCanvasWidth();
         const preview = canvasDoc.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        preview.setAttribute('width', String(PAGE_WIDTH));
-        preview.setAttribute('height', String(PAGE_HEIGHT));
-        preview.setAttribute('viewBox', `0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}`);
+        preview.setAttribute('width', String(previewWidth));
+        preview.setAttribute('height', String(previewHeight));
+        preview.setAttribute('viewBox', `0 0 ${previewWidth} ${previewHeight}`);
         preview.setAttribute('fill', 'none');
         preview.style.position = 'absolute';
         preview.style.left = '0';
         preview.style.top = '0';
-        preview.style.width = `${PAGE_WIDTH}px`;
-        preview.style.height = `${PAGE_HEIGHT}px`;
+        preview.style.width = `${previewWidth}px`;
+        preview.style.height = `${previewHeight}px`;
         preview.style.pointerEvents = 'none';
         preview.style.overflow = 'visible';
         preview.style.zIndex = '9999';
         canvasDoc.body.appendChild(preview);
         return preview;
-    }, []);
+    }, [getActiveCanvasWidth, getActivePageHeight]);
 
     const clearPreviewElement = useCallback((session: DrawStrokeSession | null) => {
         session?.previewElement?.remove();
@@ -301,10 +605,10 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
         const yRatio = (event.clientY - rect.top) / rect.height;
 
         return {
-            x: Math.max(0, Math.min(PAGE_WIDTH, xRatio * PAGE_WIDTH)),
-            y: Math.max(0, Math.min(PAGE_HEIGHT, yRatio * PAGE_HEIGHT)),
+            x: Math.max(0, Math.min(getActiveCanvasWidth(), xRatio * getActiveCanvasWidth())),
+            y: Math.max(0, Math.min(getActivePageHeight(), yRatio * getActivePageHeight())),
         };
-    }, [editor]);
+    }, [editor, getActiveCanvasWidth, getActivePageHeight]);
 
     const addCanvasComponent = useCallback((payload: unknown, styleOverrides: Record<string, string> = {}) => {
         if (!editor) return null;
@@ -324,8 +628,10 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
         if (snapRef.current) applySnapForComponent(inserted);
         selectComponent(editor, inserted);
         syncCanvasSchema(editor);
+        syncActivePageHeightFromCanvas(true);
+        markAutoSaveDirty();
         return inserted;
-    }, [editor, snapRef, syncCanvasSchema]);
+    }, [editor, markAutoSaveDirty, snapRef, syncActivePageHeightFromCanvas, syncCanvasSchema]);
 
     const insertBlockAtPoint = useCallback((
         blockId: string,
@@ -497,7 +803,48 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
         handleZoomOut,
         handleZoomReset,
         handleZoomSliderChange,
-    } = useCanvasHandlers(editor, zoomRef, setZoomLevel);
+    } = useCanvasHandlers(editor, zoomRef, setZoomLevel, canvasShellRef);
+
+    const centerCanvasShell = useCallback((top = false) => {
+        const shell = canvasShellRef.current;
+        if (!shell) return;
+
+        window.requestAnimationFrame(() => {
+            shell.scrollLeft = Math.max(0, Math.round((shell.scrollWidth - shell.clientWidth) / 2));
+            if (top) {
+                shell.scrollTop = Math.max(0, CANVAS_INFINITE_PADDING - CANVAS_INITIAL_TOP_GAP);
+            }
+            (editor as unknown as { refresh?: () => void } | null)?.refresh?.();
+            (editor as unknown as { Canvas?: { refresh?: () => void } } | null)?.Canvas?.refresh?.();
+        });
+    }, [canvasShellRef, editor]);
+
+    const fitCanvasToViewport = useCallback((mode: CanvasDeviceMode = deviceMode) => {
+        if (!canvasShellRef.current) return;
+        const shellRect = canvasShellRef.current.getBoundingClientRect();
+        if (!shellRect.width || !shellRect.height) return;
+
+        const targetWidth = CANVAS_DEVICE_WIDTHS[mode];
+        const widthRatio = (shellRect.width - 80) / targetWidth;
+        const fitRatio = widthRatio;
+        if (!Number.isFinite(fitRatio) || fitRatio <= 0) return;
+
+        const fitZoom = Math.max(20, Math.min(100, Math.round(fitRatio * 100)));
+        setCanvasZoom(fitZoom);
+        setTimeout(() => centerCanvasShell(true), 90);
+    }, [canvasShellRef, centerCanvasShell, deviceMode, setCanvasZoom]);
+
+    const applyDeviceMode = useCallback((mode: CanvasDeviceMode) => {
+        setDeviceMode(mode);
+        if (!editor) return;
+        const targetDevice = mode === 'desktop' ? 'Desktop' : mode === 'tablet' ? 'Tablet' : 'Phone';
+        const maybeEditor = editor as unknown as { setDevice?: (name: string) => void };
+        maybeEditor.setDevice?.(targetDevice);
+        setTimeout(() => {
+            applyCanvasDeviceViewport(mode);
+            centerCanvasShell(true);
+        }, 80);
+    }, [applyCanvasDeviceViewport, centerCanvasShell, editor]);
 
     // Component handlers
     const {
@@ -525,9 +872,10 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
     } = useDragDropHandlers(editor, sidebarBlocks, snapRef, syncCanvasSchema, draggedBlockIdRef, draggedBlockRef);
 
     // Save handler
-    const { handleSave } = useSaveHandler(
+    const { handleSave, handleAutoSave } = useSaveHandler(
         editor,
         userId,
+        isOnline,
         currentProjectId,
         projectName,
         setSaving,
@@ -536,12 +884,84 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
         pagesRef,
         activePageIndexRef,
         snapshotCurrentPage,
+        deviceMode,
     );
 
     // Close context menu callback
     const closeContextMenu = useCallback(() => {
         setContextMenu((prev) => ({ ...prev, open: false }));
     }, [setContextMenu]);
+
+    const requestAutoSaveSoon = useCallback((delay = 900) => {
+        markAutoSaveDirty();
+        if (!editor || !userId || !isEditorHydrated || !isOnline) return;
+
+        if (forcedAutoSaveTimerRef.current) {
+            clearTimeout(forcedAutoSaveTimerRef.current);
+        }
+
+        forcedAutoSaveTimerRef.current = setTimeout(() => {
+            lastAutoSaveFingerprintRef.current = '';
+            void handleAutoSave();
+        }, delay);
+    }, [
+        editor,
+        handleAutoSave,
+        isEditorHydrated,
+        isOnline,
+        markAutoSaveDirty,
+        userId,
+    ]);
+
+    const adjustActivePageHeight = useCallback((delta: number) => {
+        const pageIndex = activePageIndexRef.current;
+        const currentPage = pagesRef.current[pageIndex];
+        if (!currentPage) return;
+
+        const contentHeight = editor ? getCanvasContentHeight(editor) : PAGE_HEIGHT;
+        const currentHeight = clampCanvasPageHeight(currentPage.height ?? contentHeight);
+        const minHeight = clampCanvasPageHeight(contentHeight);
+        const shell = canvasShellRef.current;
+        const wasNearBottom = shell
+            ? shell.scrollTop + shell.clientHeight >= shell.scrollHeight - 80
+            : false;
+        const nextHeight = delta < 0
+            ? Math.max(PAGE_HEIGHT, minHeight, currentHeight + delta)
+            : clampCanvasPageHeight(currentHeight + delta);
+
+        if (nextHeight === currentHeight) {
+            setSaveMsg(delta < 0 ? 'A tela ja esta no menor tamanho seguro para o conteudo.' : '');
+            if (delta < 0) setTimeout(() => setSaveMsg(''), 1800);
+            return;
+        }
+
+        const nextPages = [...pagesRef.current];
+        nextPages[pageIndex] = {
+            ...currentPage,
+            height: nextHeight,
+        };
+        pagesRef.current = nextPages;
+        setPages(nextPages);
+        applyCanvasDeviceViewport(deviceMode, nextHeight);
+        window.requestAnimationFrame(() => {
+            if (shell && delta > 0 && wasNearBottom) {
+                shell.scrollTop = shell.scrollHeight;
+            }
+            centerCanvasShell(false);
+        });
+        requestAutoSaveSoon(600);
+    }, [
+        activePageIndexRef,
+        applyCanvasDeviceViewport,
+        canvasShellRef,
+        centerCanvasShell,
+        deviceMode,
+        editor,
+        pagesRef,
+        requestAutoSaveSoon,
+        setSaveMsg,
+        setPages,
+    ]);
 
     const normalizePagePath = useCallback((value: string, fallback = '/page') => {
         const baseFallback = fallback.startsWith('/') ? fallback : `/${fallback}`;
@@ -584,7 +1004,24 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
         activePageIndexRef.current = targetIndex;
         setActivePageIndex(targetIndex);
         applyPageToCanvas(targetPage);
-    }, [editor, snapshotCurrentPage, pagesRef, activePageIndexRef, setPages, setActivePageIndex, applyPageToCanvas]);
+        setTimeout(() => {
+            applyCanvasDeviceViewport(deviceMode, targetPage.height ?? PAGE_HEIGHT);
+            centerCanvasShell(true);
+        }, 0);
+        requestAutoSaveSoon();
+    }, [
+        editor,
+        snapshotCurrentPage,
+        pagesRef,
+        activePageIndexRef,
+        setPages,
+        setActivePageIndex,
+        applyPageToCanvas,
+        applyCanvasDeviceViewport,
+        centerCanvasShell,
+        deviceMode,
+        requestAutoSaveSoon,
+    ]);
 
     const handleCreatePage = useCallback(() => {
         if (!editor) return;
@@ -600,6 +1037,7 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
             components: [],
             styles: [],
             schema: [],
+            height: PAGE_HEIGHT,
         };
 
         const nextPages = [...snapshotPages, newPage];
@@ -608,7 +1046,25 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
         activePageIndexRef.current = nextIndex;
         setActivePageIndex(nextIndex);
         applyPageToCanvas(newPage);
-    }, [editor, snapshotCurrentPage, pagesRef, setPages, activePageIndexRef, setActivePageIndex, makeUniquePagePath, applyPageToCanvas]);
+        setTimeout(() => {
+            applyCanvasDeviceViewport(deviceMode, PAGE_HEIGHT);
+            centerCanvasShell(true);
+        }, 0);
+        requestAutoSaveSoon();
+    }, [
+        editor,
+        snapshotCurrentPage,
+        pagesRef,
+        setPages,
+        activePageIndexRef,
+        setActivePageIndex,
+        makeUniquePagePath,
+        applyPageToCanvas,
+        applyCanvasDeviceViewport,
+        centerCanvasShell,
+        deviceMode,
+        requestAutoSaveSoon,
+    ]);
 
     const handleRenamePage = useCallback((pageId: string, nextPathInput: string) => {
         const pageIndex = pagesRef.current.findIndex((page) => page.id === pageId);
@@ -630,7 +1086,8 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
         };
         pagesRef.current = nextPages;
         setPages(nextPages);
-    }, [makeUniquePagePath, normalizePagePath, pagesRef, setPages]);
+        requestAutoSaveSoon();
+    }, [makeUniquePagePath, normalizePagePath, pagesRef, requestAutoSaveSoon, setPages]);
 
     const captureCanvasSnapshot = useCallback(() => {
         if (!editor) {
@@ -655,7 +1112,11 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
             };
         }
 
-        const wrapper = canvasDoc.body.querySelector('[data-gjs-type="wrapper"]') as HTMLElement | null;
+        const wrapper = ((
+            canvasDoc.body.matches('[data-gjs-type="wrapper"]')
+                ? canvasDoc.body
+                : canvasDoc.body.querySelector('[data-gjs-type="wrapper"]')
+        ) as HTMLElement | null) ?? canvasDoc.body;
         const wrapperRect = wrapper?.getBoundingClientRect();
         const wrapperBounds: WrapperBoundsSnapshot = {
             width: Math.round(wrapperRect?.width || PAGE_WIDTH),
@@ -688,10 +1149,18 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
                 style: {
                     display: computed?.display || '',
                     position: computed?.position || '',
+                    fontFamily: computed?.fontFamily || '',
+                    lineHeight: computed?.lineHeight || '',
+                    letterSpacing: computed?.letterSpacing || '',
+                    textAlign: computed?.textAlign || '',
                     backgroundColor: computed?.backgroundColor || '',
+                    backgroundImage: computed?.backgroundImage || '',
                     color: computed?.color || '',
                     fontSize: computed?.fontSize || '',
                     fontWeight: computed?.fontWeight || '',
+                    padding: computed?.padding || '',
+                    margin: computed?.margin || '',
+                    border: computed?.border || '',
                     borderRadius: computed?.borderRadius || '',
                     borderWidth: computed?.borderWidth || '',
                     borderColor: computed?.borderColor || '',
@@ -884,9 +1353,10 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
                 return Number(styleA['z-index'] || 0) - Number(styleB['z-index'] || 0);
             });
 
-        wrapper.components().reset(components);
+        editor.setComponents(components as never);
         editor.setStyle([] as never);
         const schema = syncCanvasSchema(editor);
+        const nextHeight = getCanvasPageHeight(editor);
         const pageIndex = activePageIndexRef.current;
         const currentPage = pagesRef.current[pageIndex];
 
@@ -894,16 +1364,32 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
             const nextPages = [...pagesRef.current];
             nextPages[pageIndex] = {
                 ...currentPage,
-                components: editor.getComponents() as unknown as unknown[],
-                styles: editor.getStyle() as unknown,
+                components: getSerializableComponents(editor),
+                styles: getSerializableStyles(editor),
                 schema,
+                height: nextHeight,
+                html: editor.getHtml(),
+                css: editor.getCss(),
+                projectData: getSerializableProjectData(editor),
             };
             pagesRef.current = nextPages;
             setPages(nextPages);
         }
 
+        applyCanvasDeviceViewport(deviceMode, nextHeight);
+        markAutoSaveDirty();
         return true;
-    }, [activePageIndexRef, editor, pagesRef, setPages, shapeToCanvasComponent, syncCanvasSchema]);
+    }, [
+        activePageIndexRef,
+        applyCanvasDeviceViewport,
+        deviceMode,
+        editor,
+        markAutoSaveDirty,
+        pagesRef,
+        setPages,
+        shapeToCanvasComponent,
+        syncCanvasSchema,
+    ]);
 
     const handleGenerateAi = useCallback(async () => {
         if (!editor) {
@@ -941,12 +1427,29 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
 
             const output = result.output as { recognizedShapes?: RecognizedShape[]; summary?: string };
             const shapes = output.recognizedShapes ?? [];
-            const applied = applyAiGeneratedLayout(shapes);
+            const canApplyRecognizedShapes = shapes.length > 0 && shapes.every((shape) => {
+                const sourceType = shape.sourceType.toLowerCase();
+                return sourceType.includes('freehand') || sourceType.includes('shape-');
+            });
+            const applied = canApplyRecognizedShapes ? applyAiGeneratedLayout(shapes) : false;
+            const preservedStyles = shapes.length > 0 && !canApplyRecognizedShapes;
 
-            setAiOutput(applied ? 'Layout atualizado pela IA.' : 'Nenhuma forma foi reconhecida para aplicar.');
+            setAiOutput(
+                applied
+                    ? 'Layout atualizado pela IA.'
+                    : preservedStyles
+                        ? 'IA gerou saida fiel preservando estilos, cores e CSS do canvas.'
+                        : 'Nenhuma forma foi reconhecida para aplicar.',
+            );
             setLeftSidebarCollapsed(true);
             setLeftPanelMode('elements');
-            setSaveMsg(applied ? 'Layout atualizado com IA.' : 'Desenhe ou adicione elementos antes de gerar com IA.');
+            setSaveMsg(
+                applied
+                    ? 'Layout atualizado com IA.'
+                    : preservedStyles
+                        ? 'Layout preservado: estilos e CSS mantidos na geracao IA.'
+                        : 'Desenhe ou adicione elementos antes de gerar com IA.',
+            );
             setTimeout(() => setSaveMsg(''), 2800);
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Falha ao gerar com IA.';
@@ -967,6 +1470,436 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
         setLeftSidebarCollapsed,
         setLeftPanelMode,
         setSaveMsg,
+    ]);
+
+    const isTextLikeComponent = useCallback((component: AnyComponent | null) => {
+        if (!component) return false;
+        const tagName = String(component.get?.('tagName') ?? '').toLowerCase();
+        const type = String(component.getAttributes?.()?.['data-dc-type'] ?? component.get?.('type') ?? '').toLowerCase();
+        return (
+            ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'button', 'a', 'li'].includes(tagName) ||
+            type.includes('text') ||
+            type.includes('title') ||
+            type.includes('paragraph') ||
+            type.includes('button')
+        );
+    }, []);
+
+    const getSelectedCanvasElement = useCallback((selected: AnyComponent, canvasDoc: Document) => (
+        (selected as unknown as { getEl?: () => HTMLElement | null }).getEl?.()
+        ?? canvasDoc.getElementById(selected.getId?.() ?? '')
+    ), []);
+
+    const getActiveTextRange = useCallback((canvasDoc: Document, componentEl: HTMLElement) => {
+        const selection = canvasDoc.getSelection?.();
+        if (!selection || selection.isCollapsed || selection.rangeCount === 0) return null;
+
+        const range = selection.getRangeAt(0);
+        const commonNode = range.commonAncestorContainer;
+        const commonElement = commonNode.nodeType === 1
+            ? commonNode as Element
+            : commonNode.parentElement;
+        if (!commonElement || !componentEl.contains(commonElement)) return null;
+
+        return range;
+    }, []);
+
+    const refreshTextToolbar = useCallback(() => {
+        if (!editor || (drawModeActive && activeDrawTool !== 'select')) {
+            setTextToolbar(null);
+            return;
+        }
+
+        const selected = getSelectedComponent();
+        if (!selected || !isTextLikeComponent(selected)) {
+            setTextToolbar(null);
+            return;
+        }
+
+        const canvasApi = (editor as {
+            Canvas?: {
+                getDocument?: () => Document | null;
+                getFrameEl?: () => HTMLIFrameElement | null;
+            };
+        }).Canvas;
+        const canvasDoc = canvasApi?.getDocument?.();
+        const frameEl = canvasApi?.getFrameEl?.();
+        if (!canvasDoc || !frameEl) {
+            setTextToolbar(null);
+            return;
+        }
+
+        const componentEl = getSelectedCanvasElement(selected, canvasDoc);
+        if (!componentEl) {
+            setTextToolbar(null);
+            return;
+        }
+
+        const componentRect = componentEl.getBoundingClientRect();
+        if (componentRect.width < 2 || componentRect.height < 2) {
+            setTextToolbar(null);
+            return;
+        }
+
+        const selectedRange = getActiveTextRange(canvasDoc, componentEl);
+        const rangeRect = selectedRange?.getBoundingClientRect();
+        const anchorRect = rangeRect && rangeRect.width > 1 && rangeRect.height > 1
+            ? rangeRect
+            : componentRect;
+        const computed = canvasDoc.defaultView?.getComputedStyle(componentEl);
+        let backgroundLuminance: number | null = null;
+        let backgroundProbe: HTMLElement | null = componentEl;
+        while (backgroundProbe && backgroundLuminance == null) {
+            const probeStyle = canvasDoc.defaultView?.getComputedStyle(backgroundProbe);
+            backgroundLuminance = parseColorLuminance(probeStyle?.backgroundColor ?? '');
+            backgroundProbe = backgroundProbe.parentElement;
+        }
+        backgroundLuminance ??= parseColorLuminance(canvasDoc.defaultView?.getComputedStyle(canvasDoc.body)?.backgroundColor ?? '') ?? 1;
+        const frameRect = frameEl.getBoundingClientRect();
+        const frameLayoutWidth = frameEl.offsetWidth || Number.parseFloat(frameEl.style.width) || getActiveCanvasWidth();
+        const frameLayoutHeight = frameEl.offsetHeight || Number.parseFloat(frameEl.style.height) || getActivePageHeight();
+        const scaleX = frameRect.width / Math.max(1, frameLayoutWidth);
+        const scaleY = frameRect.height / Math.max(1, frameLayoutHeight);
+        const visualCenterX = frameRect.left + (anchorRect.left + anchorRect.width / 2) * scaleX;
+        const visualTop = frameRect.top + anchorRect.top * scaleY;
+        const visualBottom = frameRect.top + (anchorRect.top + anchorRect.height) * scaleY;
+        const estimatedHalfWidth = Math.min(390, Math.max(180, window.innerWidth * 0.38));
+        const safeX = window.innerWidth < 560
+            ? window.innerWidth / 2
+            : Math.max(estimatedHalfWidth, Math.min(window.innerWidth - estimatedHalfWidth, visualCenterX));
+        const shouldPlaceBelow = visualTop < 170;
+        const currentStyle = selected.getStyle?.() ?? {};
+        const attrs = selected.getAttributes?.() ?? {};
+        const tagName = String(selected.get?.('tagName') ?? '').toLowerCase();
+        const type = String(attrs['data-dc-type'] ?? selected.get?.('type') ?? '').toLowerCase();
+        const fontWeight = String(currentStyle['font-weight'] ?? computed?.fontWeight ?? '');
+        const numericWeight = Number.parseInt(fontWeight, 10);
+        const textDecoration = String(
+            currentStyle['text-decoration']
+            ?? currentStyle['textDecoration']
+            ?? computed?.textDecorationLine
+            ?? '',
+        ).toLowerCase();
+        const fontSizeNumber = Math.round(Number.parseFloat(String(currentStyle['font-size'] ?? computed?.fontSize ?? '16')) || 16);
+        const rawLineHeight = String(currentStyle['line-height'] ?? computed?.lineHeight ?? '1.25');
+        const lineHeightNumber = Number.parseFloat(rawLineHeight);
+        const lineHeight = rawLineHeight.includes('px') && Number.isFinite(lineHeightNumber) && fontSizeNumber > 0
+            ? String(Math.round((lineHeightNumber / fontSizeNumber) * 100) / 100)
+            : rawLineHeight === 'normal'
+                ? '1.25'
+                : rawLineHeight;
+        const rawLetterSpacing = String(currentStyle['letter-spacing'] ?? computed?.letterSpacing ?? '0');
+        const letterSpacing = rawLetterSpacing === 'normal'
+            ? '0'
+            : String(Number.parseFloat(rawLetterSpacing) || 0);
+        const textAlign = String(currentStyle['text-align'] ?? computed?.textAlign ?? 'left').toLowerCase();
+        const listStyle = String(currentStyle['list-style-type'] ?? computed?.listStyleType ?? '').toLowerCase();
+        const align = textAlign === 'center' || textAlign === 'right' || textAlign === 'justify'
+            ? textAlign
+            : 'left';
+
+        setTextToolbar({
+            x: safeX,
+            y: shouldPlaceBelow
+                ? Math.max(18, Math.min(window.innerHeight - 80, visualBottom + 14))
+                : Math.max(154, Math.min(window.innerHeight - 20, visualTop - 14)),
+            placement: shouldPlaceBelow ? 'bottom' : 'top',
+            tone: backgroundLuminance > 0.55 ? 'light' : 'dark',
+            bold: fontWeight === 'bold' || (Number.isFinite(numericWeight) && numericWeight >= 600),
+            italic: String(currentStyle['font-style'] ?? computed?.fontStyle ?? '').toLowerCase() === 'italic',
+            underline: textDecoration.includes('underline'),
+            align,
+            fontSize: String(fontSizeNumber),
+            lineHeight,
+            letterSpacing,
+            color: toHexColor(currentStyle.color ?? computed?.color, '#111827'),
+            backgroundColor: toHexColor(currentStyle['background-color'] ?? computed?.backgroundColor, '#ffffff'),
+            href: String(attrs.href ?? ''),
+            target: attrs.target === '_blank' ? '_blank' : '_self',
+            isLink: Boolean(attrs.href) || tagName === 'a',
+            isButtonLike: tagName === 'button' || attrs.role === 'button' || type.includes('button'),
+            listStyle: listStyle === 'disc' || listStyle === 'circle' || listStyle === 'square'
+                ? 'disc'
+                : listStyle === 'decimal'
+                    ? 'decimal'
+                    : 'none',
+        });
+    }, [
+        activeDrawTool,
+        drawModeActive,
+        editor,
+        getActiveCanvasWidth,
+        getActivePageHeight,
+        getActiveTextRange,
+        getSelectedCanvasElement,
+        getSelectedComponent,
+        isTextLikeComponent,
+    ]);
+
+    const handleTextStyleAction = useCallback((action: TextStyleAction, value?: TextStyleValue) => {
+        const selected = getSelectedComponent();
+        if (!editor || !selected || !isTextLikeComponent(selected)) return;
+
+        const canvasApi = (editor as { Canvas?: { getDocument?: () => Document | null } }).Canvas;
+        const canvasDoc = canvasApi?.getDocument?.();
+        const componentEl = canvasDoc ? getSelectedCanvasElement(selected, canvasDoc) : null;
+        const selectedRange = canvasDoc && componentEl ? getActiveTextRange(canvasDoc, componentEl) : null;
+        const hasTextRange = Boolean(selectedRange && componentEl);
+        const runRangeCommand = (command: string, commandValue?: string) => {
+            if (!canvasDoc || !componentEl || !hasTextRange) return false;
+            componentEl.focus?.();
+            canvasDoc.execCommand(command, false, commandValue);
+            selected.set('content', componentEl.innerHTML);
+            return true;
+        };
+
+        if (action === 'bold' && runRangeCommand('bold')) {
+            syncCanvasSchema(editor);
+            markAutoSaveDirty();
+            window.requestAnimationFrame(refreshTextToolbar);
+            return;
+        }
+
+        if (action === 'italic' && runRangeCommand('italic')) {
+            syncCanvasSchema(editor);
+            markAutoSaveDirty();
+            window.requestAnimationFrame(refreshTextToolbar);
+            return;
+        }
+
+        if (action === 'underline' && runRangeCommand('underline')) {
+            syncCanvasSchema(editor);
+            markAutoSaveDirty();
+            window.requestAnimationFrame(refreshTextToolbar);
+            return;
+        }
+
+        if (action === 'align-left' && runRangeCommand('justifyLeft')) {
+            syncCanvasSchema(editor);
+            markAutoSaveDirty();
+            window.requestAnimationFrame(refreshTextToolbar);
+            return;
+        }
+
+        if (action === 'align-center' && runRangeCommand('justifyCenter')) {
+            syncCanvasSchema(editor);
+            markAutoSaveDirty();
+            window.requestAnimationFrame(refreshTextToolbar);
+            return;
+        }
+
+        if (action === 'align-right' && runRangeCommand('justifyRight')) {
+            syncCanvasSchema(editor);
+            markAutoSaveDirty();
+            window.requestAnimationFrame(refreshTextToolbar);
+            return;
+        }
+
+        if (action === 'list-bullet' && runRangeCommand('insertUnorderedList')) {
+            syncCanvasSchema(editor);
+            markAutoSaveDirty();
+            window.requestAnimationFrame(refreshTextToolbar);
+            return;
+        }
+
+        if (action === 'list-number' && runRangeCommand('insertOrderedList')) {
+            syncCanvasSchema(editor);
+            markAutoSaveDirty();
+            window.requestAnimationFrame(refreshTextToolbar);
+            return;
+        }
+
+        if (action === 'clear-formatting' && runRangeCommand('removeFormat')) {
+            syncCanvasSchema(editor);
+            markAutoSaveDirty();
+            window.requestAnimationFrame(refreshTextToolbar);
+            return;
+        }
+
+        if (action === 'color' && typeof value === 'string' && runRangeCommand('foreColor', value)) {
+            syncCanvasSchema(editor);
+            markAutoSaveDirty();
+            window.requestAnimationFrame(refreshTextToolbar);
+            return;
+        }
+
+        if (action === 'background-color' && typeof value === 'string' && runRangeCommand('hiliteColor', value)) {
+            syncCanvasSchema(editor);
+            markAutoSaveDirty();
+            window.requestAnimationFrame(refreshTextToolbar);
+            return;
+        }
+
+        if (action === 'link-url' && typeof value === 'string' && value.trim() && runRangeCommand('createLink', value.trim())) {
+            if (componentEl) {
+                Array.from(componentEl.querySelectorAll('a[href]')).forEach((anchor) => {
+                    anchor.setAttribute('target', textToolbar?.target ?? '_self');
+                    if ((textToolbar?.target ?? '_self') === '_blank') {
+                        anchor.setAttribute('rel', 'noopener noreferrer');
+                    } else {
+                        anchor.removeAttribute('rel');
+                    }
+                });
+                selected.set('content', componentEl.innerHTML);
+            }
+            syncCanvasSchema(editor);
+            markAutoSaveDirty();
+            window.requestAnimationFrame(refreshTextToolbar);
+            return;
+        }
+
+        const currentStyle = selected.getStyle?.() ?? {};
+        const nextStyle: Record<string, string | number | undefined> = { ...currentStyle };
+        const attrs = selected.getAttributes?.() ?? {};
+        const nextAttrs: Record<string, string> = { ...attrs };
+        const setStyleValue = (key: string, nextValue: string | number | undefined) => {
+            if (nextValue === undefined || nextValue === '') {
+                delete nextStyle[key];
+                return;
+            }
+            nextStyle[key] = nextValue;
+        };
+
+        if (action === 'bold') {
+            const currentWeight = String(currentStyle['font-weight'] ?? '');
+            const numericWeight = Number.parseInt(currentWeight, 10);
+            const active = textToolbar?.bold ?? (currentWeight === 'bold' || (Number.isFinite(numericWeight) && numericWeight >= 600));
+            nextStyle['font-weight'] = active ? '400' : '800';
+        }
+
+        if (action === 'italic') {
+            nextStyle['font-style'] = (textToolbar?.italic ?? String(currentStyle['font-style'] ?? '').toLowerCase() === 'italic')
+                ? 'normal'
+                : 'italic';
+        }
+
+        if (action === 'underline') {
+            const decoration = String(currentStyle['text-decoration'] ?? currentStyle['textDecoration'] ?? '').toLowerCase();
+            nextStyle['text-decoration'] = (textToolbar?.underline ?? decoration.includes('underline')) ? 'none' : 'underline';
+        }
+
+        if (action === 'align-left') setStyleValue('text-align', 'left');
+        if (action === 'align-center') setStyleValue('text-align', 'center');
+        if (action === 'align-right') setStyleValue('text-align', 'right');
+
+        if (action === 'font-size') {
+            const numeric = Number.parseFloat(String(value ?? ''));
+            setStyleValue('font-size', Number.isFinite(numeric) && numeric > 0 ? `${Math.round(numeric)}px` : undefined);
+        }
+
+        if (action === 'line-height') {
+            const numeric = Number.parseFloat(String(value ?? ''));
+            setStyleValue('line-height', Number.isFinite(numeric) && numeric > 0 ? String(numeric) : undefined);
+        }
+
+        if (action === 'letter-spacing') {
+            const numeric = Number.parseFloat(String(value ?? ''));
+            setStyleValue('letter-spacing', Number.isFinite(numeric) ? `${numeric}px` : undefined);
+        }
+
+        if (action === 'color' && typeof value === 'string') setStyleValue('color', value);
+        if (action === 'background-color' && typeof value === 'string') setStyleValue('background-color', value);
+
+        if (action === 'list-bullet' || action === 'list-number') {
+            const nextListStyle = action === 'list-bullet' ? 'disc' : 'decimal';
+            const active = textToolbar?.listStyle === nextListStyle;
+            setStyleValue('display', active ? undefined : 'list-item');
+            setStyleValue('list-style-position', active ? undefined : 'outside');
+            setStyleValue('list-style-type', active ? undefined : nextListStyle);
+            setStyleValue('margin-left', active ? undefined : '1.4em');
+        }
+
+        if (action === 'link-url') {
+            const href = String(value ?? '').trim();
+            if (href) {
+                selected.set('tagName', 'a');
+                nextAttrs.href = href;
+                nextAttrs.target = textToolbar?.target ?? nextAttrs.target ?? '_self';
+                if (nextAttrs.target === '_blank') {
+                    nextAttrs.rel = 'noopener noreferrer';
+                } else {
+                    delete nextAttrs.rel;
+                }
+            } else {
+                delete nextAttrs.href;
+            }
+            selected.setAttributes(nextAttrs);
+        }
+
+        if (action === 'link-target') {
+            const target = value === '_blank' ? '_blank' : '_self';
+            nextAttrs.target = target;
+            if (target === '_blank') {
+                nextAttrs.rel = 'noopener noreferrer';
+            } else {
+                delete nextAttrs.rel;
+            }
+            selected.setAttributes(nextAttrs);
+        }
+
+        if (action === 'link-remove') {
+            delete nextAttrs.href;
+            delete nextAttrs.target;
+            delete nextAttrs.rel;
+            selected.setAttributes(nextAttrs);
+        }
+
+        if (action === 'buttonify') {
+            selected.set('tagName', 'a');
+            nextAttrs.href = nextAttrs.href || textToolbar?.href || '#';
+            nextAttrs.role = 'button';
+            nextAttrs['data-dc-type'] = 'button';
+            nextAttrs.target = textToolbar?.target ?? nextAttrs.target ?? '_self';
+            if (nextAttrs.target === '_blank') {
+                nextAttrs.rel = 'noopener noreferrer';
+            }
+            selected.setAttributes(nextAttrs);
+            setStyleValue('display', String(currentStyle.display ?? '').includes('flex') ? currentStyle.display : 'inline-flex');
+            setStyleValue('align-items', currentStyle['align-items'] ?? 'center');
+            setStyleValue('justify-content', currentStyle['justify-content'] ?? 'center');
+            setStyleValue('gap', currentStyle.gap ?? '8px');
+            setStyleValue('padding', currentStyle.padding ?? '12px 18px');
+            setStyleValue('border-radius', currentStyle['border-radius'] ?? '12px');
+            setStyleValue('background-color', currentStyle['background-color'] ?? '#7c3aed');
+            setStyleValue('color', currentStyle.color ?? '#ffffff');
+            setStyleValue('text-decoration', 'none');
+            setStyleValue('font-weight', currentStyle['font-weight'] ?? '800');
+            setStyleValue('cursor', 'pointer');
+        }
+
+        if (action === 'clear-formatting') {
+            [
+                'font-weight',
+                'font-style',
+                'text-decoration',
+                'text-align',
+                'font-size',
+                'line-height',
+                'letter-spacing',
+                'color',
+                'background-color',
+                'list-style-position',
+                'list-style-type',
+                'margin-left',
+            ].forEach((key) => delete nextStyle[key]);
+        }
+
+        selected.setStyle(Object.fromEntries(
+            Object.entries(nextStyle).filter(([, entryValue]) => entryValue !== undefined && entryValue !== ''),
+        ) as Record<string, string | number>);
+        syncCanvasSchema(editor);
+        markAutoSaveDirty();
+        window.requestAnimationFrame(refreshTextToolbar);
+    }, [
+        editor,
+        getActiveTextRange,
+        getSelectedCanvasElement,
+        getSelectedComponent,
+        isTextLikeComponent,
+        markAutoSaveDirty,
+        refreshTextToolbar,
+        syncCanvasSchema,
+        textToolbar,
     ]);
 
     const handleApplyQuickEdit = useCallback((action: QuickEditAction) => {
@@ -1025,26 +1958,164 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
     useEffect(() => {
         if (!editor) {
             setHasSelectedComponent(false);
+            setTextToolbar(null);
             return;
         }
 
-        const refreshSelection = () => setHasSelectedComponent(Boolean(getSelectedComponent()));
+        const refreshSelection = () => {
+            setHasSelectedComponent(Boolean(getSelectedComponent()));
+            window.requestAnimationFrame(refreshTextToolbar);
+        };
         const eventsApi = editor as unknown as {
             on: (name: string, callback: () => void) => void;
             off: (name: string, callback: () => void) => void;
         };
+        const canvasDoc = (editor as { Canvas?: { getDocument?: () => Document | null } }).Canvas?.getDocument?.();
+        const shell = canvasShellRef.current;
+        const selectionEvents = [
+            'component:selected',
+            'component:deselected',
+            'component:remove',
+            'component:update',
+            'component:styleUpdate',
+            'component:drag',
+            'component:drag:end',
+            'component:resize',
+            'canvas:coords',
+            'canvas:zoom',
+        ];
 
         refreshSelection();
-        eventsApi.on('component:selected', refreshSelection);
-        eventsApi.on('component:deselected', refreshSelection);
-        eventsApi.on('component:remove', refreshSelection);
+        selectionEvents.forEach((eventName) => eventsApi.on(eventName, refreshSelection));
+        canvasDoc?.addEventListener('selectionchange', refreshSelection);
+        shell?.addEventListener('scroll', refreshSelection, { passive: true });
+        window.addEventListener('resize', refreshSelection);
 
         return () => {
-            eventsApi.off('component:selected', refreshSelection);
-            eventsApi.off('component:deselected', refreshSelection);
-            eventsApi.off('component:remove', refreshSelection);
+            selectionEvents.forEach((eventName) => eventsApi.off(eventName, refreshSelection));
+            canvasDoc?.removeEventListener('selectionchange', refreshSelection);
+            shell?.removeEventListener('scroll', refreshSelection);
+            window.removeEventListener('resize', refreshSelection);
         };
-    }, [editor, getSelectedComponent]);
+    }, [canvasShellRef, editor, getSelectedComponent, refreshTextToolbar]);
+
+    useEffect(() => {
+        if (!editor || !isEditorHydrated) return;
+
+        const eventsApi = editor as unknown as {
+            on: (name: string, callback: () => void) => void;
+            off: (name: string, callback: () => void) => void;
+        };
+        const dirtyEvents = [
+            'update',
+            'component:add',
+            'component:update',
+            'component:update:content',
+            'component:styleUpdate',
+            'component:remove',
+            'component:resize',
+            'component:drag:end',
+            'component:clone',
+            'sorter:drag:end',
+            'canvas:drop',
+            'canvas:dragend',
+        ];
+
+        const markDirtyAndResizePage = () => {
+            syncActivePageHeightFromCanvas(true);
+            markAutoSaveDirty();
+        };
+
+        dirtyEvents.forEach((eventName) => eventsApi.on(eventName, markDirtyAndResizePage));
+
+        return () => {
+            dirtyEvents.forEach((eventName) => eventsApi.off(eventName, markDirtyAndResizePage));
+        };
+    }, [editor, isEditorHydrated, markAutoSaveDirty, syncActivePageHeightFromCanvas]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const updateStatus = () => setIsOnline(window.navigator.onLine);
+        updateStatus();
+
+        const onOnline = () => {
+            setIsOnline(true);
+            setSaveMsg('Conexao restabelecida. Auto-save ativo.');
+            setTimeout(() => setSaveMsg(''), 2200);
+        };
+        const onOffline = () => {
+            setIsOnline(false);
+            setSaveMsg('Sem internet. Auto-save pausado.');
+        };
+
+        window.addEventListener('online', onOnline);
+        window.addEventListener('offline', onOffline);
+
+        return () => {
+            window.removeEventListener('online', onOnline);
+            window.removeEventListener('offline', onOffline);
+        };
+    }, [setSaveMsg]);
+
+    useEffect(() => {
+        if (!editor || !userId || !isEditorHydrated) return;
+        if (!isOnline) return;
+
+        const pagesFingerprint = pages
+            .map((page) => `${page.id}:${page.name}:${page.schema?.length ?? 0}`)
+            .join('|');
+        const changeFingerprint = JSON.stringify({
+            projectName,
+            activePageIndex,
+            deviceMode,
+            pagesFingerprint,
+            schema: canvasStructure,
+            version: autoSaveVersion,
+        });
+
+        if (!autoSaveReadyRef.current) {
+            autoSaveReadyRef.current = true;
+            lastAutoSaveFingerprintRef.current = changeFingerprint;
+            return;
+        }
+
+        if (lastAutoSaveFingerprintRef.current === changeFingerprint) {
+            return;
+        }
+
+        if (autoSaveTimerRef.current) {
+            clearTimeout(autoSaveTimerRef.current);
+        }
+
+        autoSaveTimerRef.current = setTimeout(() => {
+            lastAutoSaveFingerprintRef.current = changeFingerprint;
+            void handleAutoSave();
+        }, 1200);
+
+        return () => {
+            if (autoSaveTimerRef.current) {
+                clearTimeout(autoSaveTimerRef.current);
+            }
+        };
+    }, [
+        editor,
+        userId,
+        isOnline,
+        isEditorHydrated,
+        projectName,
+        activePageIndex,
+        deviceMode,
+        pages,
+        canvasStructure,
+        autoSaveVersion,
+        handleAutoSave,
+    ]);
+
+    useEffect(() => () => {
+        if (forcedAutoSaveTimerRef.current) {
+            clearTimeout(forcedAutoSaveTimerRef.current);
+        }
+    }, []);
 
     // Sync page refs
     useSyncPageRefs(pages, pagesRef, activePageIndex, activePageIndexRef, zoomLevel, zoomRef, snapEnabled, snapRef);
@@ -1061,11 +2132,42 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
     }, [applyCanvasBackdrop, syncCanvasSchema, setSidebarBlocks, setEditor, snapRef]);
 
     useEffect(() => {
+        if (!editor || hydratedEditorRef.current) return;
+
+        const targetPage = pagesRef.current[activePageIndexRef.current] ?? pagesRef.current[0];
+        if (targetPage) {
+            applyPageToCanvas(targetPage);
+            syncCanvasSchema(editor);
+        }
+
+        hydratedEditorRef.current = true;
+        autoSaveReadyRef.current = false;
+        setIsEditorHydrated(true);
+        setTimeout(() => {
+            applyCanvasDeviceViewport(deviceMode, targetPage?.height ?? PAGE_HEIGHT);
+            fitCanvasToViewport(deviceMode);
+        }, 80);
+    }, [
+        applyCanvasDeviceViewport,
+        editor,
+        pagesRef,
+        activePageIndexRef,
+        applyPageToCanvas,
+        syncCanvasSchema,
+        fitCanvasToViewport,
+        deviceMode,
+    ]);
+
+    useEffect(() => {
         if (!editor) return;
         const targetDevice = deviceMode === 'desktop' ? 'Desktop' : deviceMode === 'tablet' ? 'Tablet' : 'Phone';
         const maybeEditor = editor as unknown as { setDevice?: (name: string) => void };
         maybeEditor.setDevice?.(targetDevice);
-    }, [editor, deviceMode]);
+        setTimeout(() => {
+            applyCanvasDeviceViewport(deviceMode);
+            centerCanvasShell(true);
+        }, 50);
+    }, [applyCanvasDeviceViewport, centerCanvasShell, editor, deviceMode]);
 
     // Apply canvas backdrop when snap changes
     useEffect(() => {
@@ -1080,7 +2182,7 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
         const body = canvasDoc?.body;
         if (!body) return;
 
-        body.style.cursor = drawModeActive && activeDrawTool !== 'select' ? 'crosshair' : '';
+        body.style.cursor = drawModeActive && activeDrawTool !== 'select' ? 'crosshair' : 'grab';
 
         return () => {
             body.style.cursor = '';
@@ -1214,6 +2316,7 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
         (x: number, y: number) => movePan(x, y, panStartRef),
         () => endPan(panStartRef, setIsPanning),
         setCanvasZoom,
+        !drawModeActive || activeDrawTool === 'select',
     );
 
     // Context menu
@@ -1333,6 +2436,9 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
                 onZoomOut={() => handleZoomOut(zoomLevel)}
                 onZoomReset={handleZoomReset}
                 onZoomIn={() => handleZoomIn(zoomLevel)}
+                pageHeight={pages[activePageIndex]?.height ?? PAGE_HEIGHT}
+                onIncreasePageHeight={() => adjustActivePageHeight(520)}
+                onDecreasePageHeight={() => adjustActivePageHeight(-520)}
                 pages={pages}
                 activePageIndex={activePageIndex}
                 onCreatePage={handleCreatePage}
@@ -1353,6 +2459,7 @@ export default function WebBuilder({ userId, projectId: initialProjectId, projec
                 onDelete={handleDelete}
                 onClose={closeContextMenu}
             />
+            <TextSelectionToolbar state={textToolbar} onApply={handleTextStyleAction} />
         </div>
     );
 }

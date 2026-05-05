@@ -4,6 +4,133 @@ import { PAGE_HEIGHT, PAGE_WIDTH, slugify, stripHtml, applySnapForComponent } fr
 import type { SidebarBlockItem } from '../../builder-blocks/types';
 import blocksElements from '../../blocks-elements';
 
+const CANVAS_BASE_CSS = `
+* { box-sizing: border-box; }
+html {
+  background: transparent;
+  width: 100%;
+  min-height: 100%;
+  height: auto;
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+body {
+  margin: 0;
+  width: 100%;
+  height: auto;
+  min-height: var(--dc-page-height, ${PAGE_HEIGHT}px);
+  max-height: none;
+  overflow-x: hidden;
+  overflow-y: visible;
+  background: #ffffff;
+  position: relative;
+  transform: none;
+  transform-origin: top left;
+  color: #0f172a;
+}
+body > * {
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+img,
+video,
+iframe {
+  max-width: 100%;
+}
+[data-dc-type] {
+  box-sizing: border-box;
+}
+[data-dc-type="button"],
+button {
+  white-space: normal;
+}
+[data-dc-type*="image"],
+img {
+  object-fit: cover;
+}
+@media (max-width: 900px) {
+  body {
+    --dc-fluid-edge: clamp(20px, 4vw, 40px);
+  }
+  body > [style*="position: absolute"],
+  body > [style*="position:absolute"] {
+    left: var(--dc-fluid-edge) !important;
+    max-width: calc(100% - (var(--dc-fluid-edge) * 2)) !important;
+  }
+  body > section,
+  body > article,
+  body > nav,
+  body > footer,
+  body > div[data-dc-type="container"],
+  body > div[data-dc-type^="layout"],
+  body > div[data-dc-type="card"] {
+    width: calc(100% - (var(--dc-fluid-edge) * 2)) !important;
+  }
+  [style*="display: flex"],
+  [style*="display:flex"] {
+    flex-wrap: wrap !important;
+  }
+  [style*="grid-template-columns"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  h1,
+  [data-dc-type="title"] {
+    font-size: clamp(30px, 7vw, 54px) !important;
+    line-height: 1.08 !important;
+  }
+}
+@media (max-width: 520px) {
+  body {
+    --dc-fluid-edge: 16px;
+  }
+  body > [style*="position: absolute"],
+  body > [style*="position:absolute"] {
+    left: 16px !important;
+    width: calc(100% - 32px) !important;
+    max-width: calc(100% - 32px) !important;
+  }
+  body > [data-dc-type="shape-circle"][style] {
+    width: min(58vw, 220px) !important;
+    height: min(58vw, 220px) !important;
+  }
+  body > [data-dc-type="shape-line"] {
+    height: 4px !important;
+  }
+  body > [data-dc-type*="image"],
+  body > img {
+    height: auto !important;
+    aspect-ratio: 16 / 9;
+  }
+  [style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+  h1,
+  [data-dc-type="title"] {
+    font-size: clamp(28px, 11vw, 44px) !important;
+  }
+  p,
+  [data-dc-type="paragraph"] {
+    font-size: clamp(14px, 4.2vw, 17px) !important;
+  }
+}
+`;
+
+const injectCanvasBaseStyles = (instance: EditorInstance) => {
+  const canvasApi = (instance as { Canvas?: { getDocument?: () => Document | null } }).Canvas;
+  const doc = canvasApi?.getDocument?.();
+  if (!doc?.head) return;
+
+  const styleId = 'drawcode-canvas-base';
+  let styleEl = doc.getElementById(styleId) as HTMLStyleElement | null;
+  if (!styleEl) {
+    styleEl = doc.createElement('style');
+    styleEl.id = styleId;
+    doc.head.appendChild(styleEl);
+  }
+  styleEl.textContent = CANVAS_BASE_CSS;
+};
+
 export function initializeGrapesJS(
   snapRef: { current: boolean },
   setSidebarBlocks: (blocks: SidebarBlockItem[]) => void,
@@ -24,7 +151,8 @@ export function initializeGrapesJS(
         {
           id: 'Desktop',
           name: 'Desktop',
-          width: '',
+          width: `${PAGE_WIDTH}px`,
+          widthMedia: `${PAGE_WIDTH}px`,
         },
         {
           id: 'Tablet',
@@ -71,13 +199,7 @@ export function initializeGrapesJS(
     traitManager: { appendTo: '#traits' },
     canvas: {
       customSpots: { target: true },
-      styles: [
-        `
-        * { box-sizing: border-box; }
-        html { background: #050812; min-height: 100%; height: 100%; overflow: hidden; }
-        body { margin: 0; width: ${PAGE_WIDTH}px; height: ${PAGE_HEIGHT}px; min-height: ${PAGE_HEIGHT}px; max-height: ${PAGE_HEIGHT}px; overflow: hidden; background: #ffffff; position: relative; }
-      `,
-      ],
+      styles: [],
     },
   });
 
@@ -94,6 +216,7 @@ export function initializeGrapesJS(
   };
 
   blocksElements(instance);
+  injectCanvasBaseStyles(instance);
   applyCanvasBackdrop(instance, snapRef.current);
   instance.Canvas.setZoom(100);
 
@@ -147,11 +270,21 @@ export function initializeGrapesJS(
 
   // Setup event listeners
   instance.on('load', () => {
+    injectCanvasBaseStyles(instance);
     const wrapper = instance.getWrapper() as unknown as AnyComponent;
     if (wrapper) disableBadgesDeep(wrapper);
     removeTargetSpots();
     applyCanvasBackdrop(instance, snapRef.current);
     syncCanvasSchema(instance);
+  });
+
+  instance.on('canvas:frame:load:head', () => {
+    injectCanvasBaseStyles(instance);
+  });
+
+  instance.on('canvas:frame:load:body', () => {
+    injectCanvasBaseStyles(instance);
+    applyCanvasBackdrop(instance, snapRef.current);
   });
 
   instance.on('canvas:spot:add', (payload: unknown) => {

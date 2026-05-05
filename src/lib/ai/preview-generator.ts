@@ -12,10 +12,18 @@ const wrapperElementSchema: z.ZodType<{
     style: {
         display: string;
         position: string;
+        fontFamily: string;
+        lineHeight: string;
+        letterSpacing: string;
+        textAlign: string;
         backgroundColor: string;
+        backgroundImage: string;
         color: string;
         fontSize: string;
         fontWeight: string;
+        padding: string;
+        margin: string;
+        border: string;
         borderRadius: string;
         borderWidth: string;
         borderColor: string;
@@ -44,10 +52,18 @@ const wrapperElementSchema: z.ZodType<{
     style: z.object({
         display: z.string(),
         position: z.string(),
+        fontFamily: z.string().default(''),
+        lineHeight: z.string().default(''),
+        letterSpacing: z.string().default(''),
+        textAlign: z.string().default(''),
         backgroundColor: z.string(),
+        backgroundImage: z.string().default(''),
         color: z.string(),
         fontSize: z.string(),
         fontWeight: z.string(),
+        padding: z.string().default(''),
+        margin: z.string().default(''),
+        border: z.string().default(''),
         borderRadius: z.string(),
         borderWidth: z.string(),
         borderColor: z.string(),
@@ -65,6 +81,8 @@ export const aiGenerateRequestSchema = z.object({
     projectName: z.string().min(1).max(120).default('Sem titulo'),
     html: z.string().default(''),
     css: z.string().default(''),
+    canvasDocumentHtml: z.string().default(''),
+    canvasBodyHtml: z.string().default(''),
     wrapperHtml: z.string().default(''),
     wrapperBounds: z.object({
         width: z.number().min(1).default(1320),
@@ -176,9 +194,17 @@ const buildInlineStyle = (element: WrapperElementSnapshot) => {
         ['height', `${Math.max(0, Math.round(element.size.height))}px`],
         ['display', element.style.display],
         ['background-color', element.style.backgroundColor],
+        ['background-image', element.style.backgroundImage],
         ['color', element.style.color],
+        ['font-family', element.style.fontFamily],
         ['font-size', element.style.fontSize],
         ['font-weight', element.style.fontWeight],
+        ['line-height', element.style.lineHeight],
+        ['letter-spacing', element.style.letterSpacing],
+        ['text-align', element.style.textAlign],
+        ['padding', element.style.padding],
+        ['margin', element.style.margin],
+        ['border', element.style.border],
         ['border-radius', element.style.borderRadius],
         ['border-width', element.style.borderWidth],
         ['border-color', element.style.borderColor],

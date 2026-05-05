@@ -1,7 +1,15 @@
 import { useCallback } from 'react';
 import type { ChangeEvent } from 'react';
 import type { EditorInstance, CanvasPage, CanvasElementNode } from '../builder-core';
-import { serializeCanvas, extractImportedNodes, nodeToComponent, inferTypeFromComponent } from '../builder-core';
+import {
+  extractImportedNodes,
+  getCanvasSchemaHeight,
+  getSerializableStyles,
+  inferTypeFromComponent,
+  nodeToComponent,
+  normalizePagePath,
+  serializeCanvas,
+} from '../builder-core';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyComponent = any;
@@ -12,18 +20,6 @@ export function useFileHandlers(
   setSaveMsg: (msg: string) => void,
   syncCanvasSchema: (instance: EditorInstance) => void,
 ) {
-  const normalizePagePath = (value: string, fallback: string) => {
-    const cleaned = value
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9/_-]/g, '')
-      .replace(/\/{2,}/g, '/');
-    const prefixed = cleaned.startsWith('/') ? cleaned : `/${cleaned}`;
-    const withoutTrailing = prefixed.length > 1 ? prefixed.replace(/\/+$/g, '') : prefixed;
-    return withoutTrailing && withoutTrailing !== '/' ? withoutTrailing : fallback;
-  };
-
   const buildExportPayload = useCallback((pagesRef: React.MutableRefObject<CanvasPage[]>, activePageIndexRef: React.MutableRefObject<number>) => {
     if (!editor) return null;
     const schema = serializeCanvas(editor);
@@ -84,6 +80,7 @@ export function useFileHandlers(
             components: Array.isArray(page.components) ? page.components : [],
             styles: page.styles ?? [],
             schema: Array.isArray(page.schema) ? page.schema : [],
+            height: typeof page.height === 'number' ? page.height : getCanvasSchemaHeight(Array.isArray(page.schema) ? page.schema : []),
           }));
           const targetIndex = Math.max(0, Math.min(parsed.activePageIndex ?? 0, safePages.length - 1));
           pagesRef.current = safePages;
@@ -104,8 +101,9 @@ export function useFileHandlers(
             id: 'page-1',
             name: '/home',
             components: nodes.map(nodeToComponent),
-            styles: editor?.getStyle() ?? [],
+            styles: editor ? getSerializableStyles(editor) : [],
             schema: nodes,
+            height: getCanvasSchemaHeight(nodes),
           };
           pagesRef.current = [singlePage];
           setPages([singlePage]);

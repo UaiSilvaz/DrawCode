@@ -1,6 +1,14 @@
 import { useCallback, useRef } from 'react';
 import type { EditorInstance, CanvasPage, CanvasElementNode, AnyComponent } from '../builder-core';
-import { serializeCanvas } from '../builder-core';
+import {
+  cloneSerializable,
+  getCanvasPageHeight,
+  getSerializableComponents,
+  getSerializableProjectData,
+  getSerializableStyles,
+  nodeToComponent,
+  serializeCanvas,
+} from '../builder-core';
 
 export function useCanvasSync(
   editor: EditorInstance | null,
@@ -28,9 +36,13 @@ export function useCanvasSync(
 
     const nextPage: CanvasPage = {
       ...current,
-      components: editor.getComponents() as unknown as unknown[],
-      styles: editor.getStyle() as unknown,
+      components: getSerializableComponents(editor),
+      styles: getSerializableStyles(editor),
       schema: serializeCanvas(editor),
+      height: getCanvasPageHeight(editor),
+      html: editor.getHtml(),
+      css: editor.getCss(),
+      projectData: getSerializableProjectData(editor),
     };
 
     const nextPages = [...pagesRef.current];
@@ -44,8 +56,20 @@ export function useCanvasSync(
     const wrapper = editor.getWrapper() as unknown as AnyComponent | null;
     if (!wrapper) return;
 
-    wrapper.components().reset(page.components ?? []);
-    editor.setStyle((page.styles as never) ?? ([] as never));
+    const components = Array.isArray(page.components) && page.components.length > 0
+      ? page.components
+      : page.schema.map(nodeToComponent);
+
+    const serializableComponents = cloneSerializable<unknown[]>(components, []);
+    const serializableStyles = cloneSerializable(page.styles ?? [], []);
+
+    if (typeof editor.setComponents === 'function') {
+      editor.setComponents(serializableComponents as never);
+    } else {
+      wrapper.components().reset(serializableComponents);
+    }
+
+    editor.setStyle(serializableStyles as never);
     syncCanvasSchema(editor);
   }, [editor, syncCanvasSchema]);
 
